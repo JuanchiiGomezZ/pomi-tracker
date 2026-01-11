@@ -46,10 +46,10 @@ export class BlocksController {
     @Query('includeArchived') includeArchived?: string,
     @CurrentUser() user?: { id: string },
   ) {
-    return this.blocksService.findAll(
-      user.id,
-      includeArchived === 'true',
-    );
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    return this.blocksService.findAll(user.id, includeArchived === 'true');
   }
 
   @Get('today')
@@ -59,9 +59,10 @@ export class BlocksController {
     @Query('dayOfWeek') dayOfWeek?: string,
     @CurrentUser() user?: { id: string },
   ) {
-    const day = dayOfWeek
-      ? parseInt(dayOfWeek, 10)
-      : new Date().getDay();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    const day = dayOfWeek ? parseInt(dayOfWeek, 10) : new Date().getDay();
     return this.blocksService.getActiveForDay(user.id, day);
   }
 
@@ -90,17 +91,19 @@ export class BlocksController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete block (soft delete)' })
   @ApiResponse({ status: 204, description: 'Block deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Block has tasks, reassign required' })
+  @ApiResponse({
+    status: 400,
+    description: 'Block has tasks, reassign required',
+  })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('reassignTo') reassignToBlockId?: string,
     @CurrentUser() user?: { id: string },
   ) {
-    return this.blocksService.remove(
-      id,
-      user.id,
-      reassignToBlockId,
-    );
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    return this.blocksService.remove(id, user.id, reassignToBlockId);
   }
 
   @Post('reorder')

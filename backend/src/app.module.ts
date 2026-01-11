@@ -17,6 +17,9 @@ import { StorageModule } from './shared/storage';
 // Feature modules
 import { AuthModule, JwtAuthGuard, RolesGuard } from './modules/auth';
 import { UsersModule } from './modules/users';
+import { BlocksModule } from './modules/blocks';
+import { TasksModule } from './modules/tasks';
+import { TaskInstancesModule } from './modules/task-instances';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { UsersModule } from './modules/users';
     // Features
     AuthModule,
     UsersModule,
+    BlocksModule,
+    TasksModule,
+    TaskInstancesModule,
   ],
   providers: [
     // Global exception filter

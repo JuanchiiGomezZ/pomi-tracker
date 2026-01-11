@@ -4,7 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/database/prisma.service';
-import { CreateBlockDto, UpdateBlockDto, ReorderBlocksDto } from './dto/block.dto';
+import {
+  CreateBlockDto,
+  UpdateBlockDto,
+  ReorderBlocksDto,
+} from './dto/block.dto';
 
 @Injectable()
 export class BlocksService {
@@ -124,7 +128,7 @@ export class BlocksService {
   }
 
   async update(id: string, dto: UpdateBlockDto, userId: string) {
-    const block = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     return this.prisma.block.update({
       where: { id },
@@ -144,7 +148,7 @@ export class BlocksService {
   }
 
   async remove(id: string, userId: string, reassignToBlockId?: string) {
-    const block = await this.findOne(id, userId);
+    await this.findOne(id, userId);
 
     // Check if block has tasks
     const taskCount = await this.prisma.task.count({

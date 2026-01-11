@@ -128,11 +128,15 @@ model Block {
   // Audit fields
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String?  @map("created_by")
+  updatedBy   String?  @map("updated_by")
 
   // Relations
   tasks       Task[]
 
   @@index([userId])
+  @@index([deletedAt])
   @@map("blocks")
 }
 
@@ -168,12 +172,16 @@ model Task {
   // Audit fields
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String?   @map("created_by")
+  updatedBy   String?   @map("updated_by")
 
   // Relations
   instances   TaskInstance[]
 
   @@index([userId])
   @@index([blockId])
+  @@index([deletedAt])
   @@map("tasks")
 }
 
