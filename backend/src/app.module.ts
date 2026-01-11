@@ -20,6 +20,7 @@ import { UsersModule } from './modules/users';
 import { BlocksModule } from './modules/blocks';
 import { TasksModule } from './modules/tasks';
 import { TaskInstancesModule } from './modules/task-instances';
+import { InsightsModule } from './modules/insights';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TaskInstancesModule } from './modules/task-instances';
     BlocksModule,
     TasksModule,
     TaskInstancesModule,
+    InsightsModule,
   ],
   providers: [
     // Global exception filter
