@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../core/database/prisma.service';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateProfileDto,
+  UpdateSettingsDto,
+  RegisterFcmTokenDto,
+} from './dto/user.dto';
 import {
   createPaginatedResult,
   PaginationDto,
@@ -133,6 +139,88 @@ export class UsersService {
       data: {
         deletedAt: new Date(),
         updatedBy: deletedBy,
+      },
+    });
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        timezone: true,
+        dayCutoffHour: true,
+        dayCloseReminderHour: true,
+        currentStreak: true,
+        bestStreak: true,
+        lastActiveDate: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    await this.findOne(userId);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        avatarUrl: dto.avatarUrl,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async updateSettings(userId: string, dto: UpdateSettingsDto) {
+    await this.findOne(userId);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        timezone: dto.timezone,
+        dayCutoffHour: dto.dayCutoffHour,
+        dayCloseReminderHour: dto.dayCloseReminderHour,
+      },
+      select: {
+        id: true,
+        timezone: true,
+        dayCutoffHour: true,
+        dayCloseReminderHour: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async registerFcmToken(userId: string, dto: RegisterFcmTokenDto) {
+    await this.findOne(userId);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        fcmToken: dto.fcmToken,
+      },
+      select: {
+        id: true,
+        fcmToken: true,
       },
     });
   }

@@ -26,3 +26,18 @@ export const updateNotesSchema = z.object({
 });
 
 export class UpdateNotesDto extends createZodDto(updateNotesSchema) {}
+
+// Batch operations
+export const batchCompleteSchema = z.object({
+  date: z.string(), // ISO date string YYYY-MM-DD
+  taskIds: z.array(z.string().uuid()).optional(), // Optional: specific tasks, or all pending
+});
+
+export class BatchCompleteDto extends createZodDto(batchCompleteSchema) {}
+
+export const batchSkipSchema = z.object({
+  date: z.string(), // ISO date string YYYY-MM-DD
+  taskIds: z.array(z.string().uuid()).optional(), // Optional: specific tasks, or all pending
+});
+
+export class BatchSkipDto extends createZodDto(batchSkipSchema) {}

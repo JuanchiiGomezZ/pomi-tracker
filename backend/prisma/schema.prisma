@@ -56,14 +56,16 @@ model User {
   firebaseUid     String?  @unique @map("firebase_uid")
 
   // App-specific settings
-  timezone        String   @default("UTC")
-  dayCutoffHour   Int      @default(3) @map("day_cutoff_hour") // Hour of day when day resets (0-6)
-  fcmToken        String?  @map("fcm_token") // Firebase Cloud Messaging token
+  timezone            String   @default("UTC")
+  dayCutoffHour       Int      @default(3) @map("day_cutoff_hour") // Hour of day when day resets (0-6)
+  dayCloseReminderHour Int?    @map("day_close_reminder_hour") // Hour for day close reminder (0-23)
+  fcmToken            String?  @map("fcm_token") // Firebase Cloud Messaging token
 
   // Gamification
   currentStreak   Int      @default(0) @map("current_streak")
   bestStreak      Int      @default(0) @map("best_streak")
   lastActiveDate  DateTime? @map("last_active_date")
+  lastSyncAt      DateTime? @map("last_sync_at") // For offline sync
 
   // Multi-tenancy
   organizationId  String?  @map("organization_id")
@@ -120,6 +122,10 @@ model Block {
   // Active days for weekly schedule (0=Sun, 1=Mon, ..., 6=Sat)
   // Block only shows on these days unless it has tasks
   activeDays  Int[]    @default([0,1,2,3,4,5,6]) @map("active_days")
+
+  // Reminder settings
+  reminderEnabled Boolean @default(false) @map("reminder_enabled")
+  reminderHour    Int?    @map("reminder_hour") // Hour of day for reminder (0-23)
 
   // User relationship (DailyLoop is personal, no org)
   userId      String   @map("user_id")
@@ -219,4 +225,18 @@ enum InstanceStatus {
   COMPLETED
   SKIPPED
   MISSED
+}
+
+/// Sync log for tracking changes for offline sync
+model SyncLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  entity    String   // 'block', 'task', 'task-instance'
+  entityId  String   @map("entity_id")
+  action    String   // 'create', 'update', 'delete'
+  timestamp DateTime @default(now()) @map("timestamp")
+  data      String?  // JSON data for conflict resolution
+
+  @@index([userId, timestamp])
+  @@map("sync_logs")
 }

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/database/prisma.service';
 import {
   CompleteInstanceDto,
@@ -406,6 +407,162 @@ export class TaskInstancesService {
         bestStreak,
         lastActiveDate,
       },
+    });
+  }
+
+  async batchComplete(
+    userId: string,
+    dto: { date: string; taskIds?: string[] },
+  ) {
+    const { start, end } = this.getDateRange(dto.date);
+
+    // Build where clause with proper typing
+    const where: Prisma.TaskInstanceWhereInput = {
+      task: { userId },
+      date: { gte: start, lt: end },
+      status: 'PENDING',
+    };
+
+    // If specific taskIds provided, filter to those
+    if (dto.taskIds && dto.taskIds.length > 0) {
+      where.taskId = { in: dto.taskIds };
+    }
+
+    // Update all matching instances
+    const result = await this.prisma.taskInstance.updateMany({
+      where,
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
+    // Update user streak
+    await this.updateUserStreak(userId);
+
+    return { completed: result.count };
+  }
+
+  async batchSkip(userId: string, dto: { date: string; taskIds?: string[] }) {
+    const { start, end } = this.getDateRange(dto.date);
+
+    // Build where clause with proper typing
+    const where: Prisma.TaskInstanceWhereInput = {
+      task: { userId },
+      date: { gte: start, lt: end },
+      status: 'PENDING',
+    };
+
+    // If specific taskIds provided, filter to those
+    if (dto.taskIds && dto.taskIds.length > 0) {
+      where.taskId = { in: dto.taskIds };
+    }
+
+    // Update all matching instances
+    const result = await this.prisma.taskInstance.updateMany({
+      where,
+      data: {
+        status: 'SKIPPED',
+      },
+    });
+
+    // Update user streak
+    await this.updateUserStreak(userId);
+
+    return { skipped: result.count };
+  }
+
+  async getTodayInstances(userId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Get all active recurring tasks for the user (not archived, not one-off)
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        isArchived: false,
+        isOneOff: false, // Only recurring tasks
+      },
+      select: {
+        id: true,
+        title: true,
+        emoji: true,
+        isOneOff: true,
+        blockId: true,
+      },
+    });
+
+    // Get existing instances for today
+    const existingInstances = await this.prisma.taskInstance.findMany({
+      where: {
+        task: { userId },
+        date: { gte: today, lt: todayEnd },
+      },
+      select: {
+        id: true,
+        taskId: true,
+        status: true,
+        completedAt: true,
+        notes: true,
+        createdAt: true,
+        task: {
+          select: {
+            id: true,
+            title: true,
+            emoji: true,
+            isOneOff: true,
+            blockId: true,
+          },
+        },
+      },
+    });
+
+    // Create a map of existing instances by taskId
+    const instancesByTaskId = new Map(
+      existingInstances.map((i) => [i.taskId, i]),
+    );
+
+    // Find tasks that need instances created
+    const tasksNeedingInstances = tasks.filter(
+      (t) => !instancesByTaskId.has(t.id),
+    );
+
+    // Create instances for missing tasks (in parallel)
+    if (tasksNeedingInstances.length > 0) {
+      await this.prisma.$transaction(
+        tasksNeedingInstances.map((task) =>
+          this.prisma.taskInstance.create({
+            data: {
+              taskId: task.id,
+              date: today,
+              status: 'PENDING',
+            },
+          }),
+        ),
+      );
+    }
+
+    // Fetch all instances again (now including newly created ones)
+    return this.prisma.taskInstance.findMany({
+      where: {
+        task: { userId },
+        date: { gte: today, lt: todayEnd },
+      },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+            emoji: true,
+            isOneOff: true,
+            blockId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
     });
   }
 }

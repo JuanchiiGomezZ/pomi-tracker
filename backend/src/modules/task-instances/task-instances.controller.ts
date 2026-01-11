@@ -23,6 +23,8 @@ import {
   SkipInstanceDto,
   UnskipInstanceDto,
   UpdateNotesDto,
+  BatchCompleteDto,
+  BatchSkipDto,
 } from './dto/task-instance.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -116,5 +118,33 @@ export class TaskInstancesController {
     @CurrentUser() user: { id: string },
   ) {
     return this.taskInstancesService.getDailySummary(user.id, date);
+  }
+
+  @Get('today')
+  @ApiOperation({ summary: 'Get today instances' })
+  @ApiResponse({ status: 200, description: 'Today instances returned' })
+  getToday(@CurrentUser() user: { id: string }) {
+    return this.taskInstancesService.getTodayInstances(user.id);
+  }
+
+  @Post('batch-complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete all pending tasks for a date' })
+  @ApiQuery({ name: 'date', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Tasks completed' })
+  batchComplete(
+    @Body() dto: BatchCompleteDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.taskInstancesService.batchComplete(user.id, dto);
+  }
+
+  @Post('batch-skip')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Skip all pending tasks for a date' })
+  @ApiQuery({ name: 'date', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Tasks skipped' })
+  batchSkip(@Body() dto: BatchSkipDto, @CurrentUser() user: { id: string }) {
+    return this.taskInstancesService.batchSkip(user.id, dto);
   }
 }

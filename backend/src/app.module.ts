@@ -21,6 +21,7 @@ import { BlocksModule } from './modules/blocks';
 import { TasksModule } from './modules/tasks';
 import { TaskInstancesModule } from './modules/task-instances';
 import { InsightsModule } from './modules/insights';
+import { SyncModule } from './modules/sync';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { InsightsModule } from './modules/insights';
     TasksModule,
     TaskInstancesModule,
     InsightsModule,
+    SyncModule,
   ],
   providers: [
     // Global exception filter

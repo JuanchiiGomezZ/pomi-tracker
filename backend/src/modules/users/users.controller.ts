@@ -4,10 +4,12 @@ import {
   Post,
   Body,
   Patch,
-  Param,
   Delete,
+  Param,
   Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +19,13 @@ import {
 } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateProfileDto,
+  UpdateSettingsDto,
+  RegisterFcmTokenDto,
+} from './dto/user.dto';
 import { paginationSchema } from '../../common/dto/pagination.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -47,7 +55,7 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
   getMe(@CurrentUser() user: { id: string }) {
-    return this.usersService.findOne(user.id);
+    return this.usersService.getProfile(user.id);
   }
 
   @Get(':id')
@@ -56,6 +64,37 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  updateProfile(
+    @Body() dto: UpdateProfileDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.usersService.updateProfile(user.id, dto);
+  }
+
+  @Patch('me/settings')
+  @ApiOperation({ summary: 'Update user settings (timezone, dayCutoffHour)' })
+  @ApiResponse({ status: 200, description: 'Settings updated successfully' })
+  updateSettings(
+    @Body() dto: UpdateSettingsDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.usersService.updateSettings(user.id, dto);
+  }
+
+  @Post('me/fcm-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Register FCM token for push notifications' })
+  @ApiResponse({ status: 200, description: 'FCM token registered' })
+  registerFcmToken(
+    @Body() dto: RegisterFcmTokenDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.usersService.registerFcmToken(user.id, dto);
   }
 
   @Patch(':id')

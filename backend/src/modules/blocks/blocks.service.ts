@@ -38,6 +38,8 @@ export class BlocksService {
         sortOrder: true,
         activeDays: true,
         isArchived: false,
+        reminderEnabled: true,
+        reminderHour: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -65,6 +67,8 @@ export class BlocksService {
         sortOrder: true,
         activeDays: true,
         isArchived: false,
+        reminderEnabled: true,
+        reminderHour: true,
         createdAt: true,
         updatedAt: true,
         tasks: {
@@ -99,6 +103,8 @@ export class BlocksService {
         sortOrder: true,
         activeDays: true,
         isArchived: true,
+        reminderEnabled: true,
+        reminderHour: true,
         createdAt: true,
         updatedAt: true,
         tasks: {
@@ -142,6 +148,8 @@ export class BlocksService {
         sortOrder: true,
         activeDays: true,
         isArchived: true,
+        reminderEnabled: true,
+        reminderHour: true,
         updatedAt: true,
       },
     });
@@ -264,6 +272,8 @@ export class BlocksService {
         icon: true,
         color: true,
         activeDays: true,
+        reminderEnabled: true,
+        reminderHour: true,
         tasks: {
           where: { deletedAt: null },
           select: {

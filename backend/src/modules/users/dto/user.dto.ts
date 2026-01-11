@@ -21,3 +21,28 @@ export const updateUserSchema = z.object({
 });
 
 export class UpdateUserDto extends createZodDto(updateUserSchema) {}
+
+// Profile update (user updates their own profile)
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+
+export class UpdateProfileDto extends createZodDto(updateProfileSchema) {}
+
+// User settings (app-specific settings)
+export const updateSettingsSchema = z.object({
+  timezone: z.string().min(1).max(50).optional(),
+  dayCutoffHour: z.number().int().min(0).max(23).optional(),
+  dayCloseReminderHour: z.number().int().min(0).max(23).optional(),
+});
+
+export class UpdateSettingsDto extends createZodDto(updateSettingsSchema) {}
+
+// FCM token for push notifications
+export const registerFcmTokenSchema = z.object({
+  fcmToken: z.string().min(1),
+});
+
+export class RegisterFcmTokenDto extends createZodDto(registerFcmTokenSchema) {}
