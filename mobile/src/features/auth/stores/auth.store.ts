@@ -1,8 +1,7 @@
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
-import * as SecureStore from 'expo-secure-store';
-import type { User } from '../types/auth.types';
-import { STORAGE_KEYS } from '@/constants';
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import * as SecureStore from "expo-secure-store";
+import type { User } from "../types/auth.types";
 
 // Custom storage for SecureStore
 const createSecureStorage = () => ({
@@ -57,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
           user,
           token,
           isAuthenticated: true,
+          isLoading: false,
         });
       },
 
@@ -65,17 +65,24 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
+          isLoading: false,
         });
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       storage: createJSONStorage(() => createSecureStorage()),
       partialize: (state) => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // After hydration completes, set loading to false
+        if (state) {
+          state.setLoading(false);
+        }
+      },
     }
   )
 );

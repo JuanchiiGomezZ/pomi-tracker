@@ -1,36 +1,16 @@
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
+import { IsString, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(72),
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-});
+export class ClerkTokenDto {
+  @ApiProperty({ description: 'Clerk JWT token' })
+  @IsString()
+  @IsNotEmpty({ message: 'Clerk token is required' })
+  clerkToken: string;
+}
 
-export class RegisterDto extends createZodDto(registerSchema) {}
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-export class LoginDto extends createZodDto(loginSchema) {}
-
-export const refreshTokenSchema = z.object({
-  refreshToken: z.string(),
-});
-
-export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}
-
-export const firebaseLoginSchema = z.object({
-  idToken: z.string().min(1, 'Firebase ID token is required'),
-  fcmToken: z.string().optional(),
-  timezone: z.string().optional(),
-  dayCutoffHour: z.number().min(0).max(23).optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  avatarUrl: z.string().url().optional(),
-});
-
-export class FirebaseLoginDto extends createZodDto(firebaseLoginSchema) {}
+export class RefreshTokenDto {
+  @ApiProperty({ description: 'Refresh token' })
+  @IsString()
+  @IsNotEmpty({ message: 'Refresh token is required' })
+  refreshToken: string;
+}

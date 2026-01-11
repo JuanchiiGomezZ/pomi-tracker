@@ -1,17 +1,15 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ClerkAuthGuard } from './guards/clerk-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { FirebaseService } from '../../shared/auth/firebase.service';
+import { DatabaseModule } from '../../core/database/database.module';
 
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    DatabaseModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -19,9 +17,8 @@ import { FirebaseService } from '../../shared/auth/firebase.service';
         const expiresInStr =
           configService.get<string>('jwt.expiresIn') || '15m';
 
-        // Parse to seconds for JWT
         const match = expiresInStr.match(/^(\d+)([dhms])$/);
-        let expiresIn = 900; // default 15 min
+        let expiresIn = 900;
         if (match) {
           const value = parseInt(match[1], 10);
           const unit = match[2];
@@ -49,13 +46,7 @@ import { FirebaseService } from '../../shared/auth/firebase.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    JwtAuthGuard,
-    RolesGuard,
-    FirebaseService,
-  ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, FirebaseService],
+  providers: [AuthService, ClerkAuthGuard, RolesGuard],
+  exports: [AuthService, ClerkAuthGuard],
 })
 export class AuthModule {}

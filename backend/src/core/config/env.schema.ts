@@ -38,6 +38,12 @@ export const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('noreply@example.com'),
+
+  // Clerk Authentication
+  CLERK_SECRET_KEY: z.string().optional(),
+  CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  CLERK_WEBHOOK_SECRET: z.string().optional(),
+  CLERK_JWT_KEY: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

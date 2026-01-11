@@ -1,12 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import {
-  RegisterDto,
-  LoginDto,
-  RefreshTokenDto,
-  FirebaseLoginDto,
-} from './dto/auth.dto';
+import { RefreshTokenDto, ClerkTokenDto } from './dto/auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Auth')
@@ -14,35 +9,23 @@ import { Public } from '../../common/decorators/public.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * Exchange Clerk token for internal JWT tokens
+   * Called after successful Clerk authentication on the frontend
+   */
   @Public()
-  @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User registered successfully' })
-  @ApiResponse({ status: 409, description: 'Email already registered' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
-
-  @Public()
-  @Post('login')
+  @Post('clerk')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login with email and password' })
-  @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  @ApiOperation({ summary: 'Exchange Clerk token for internal JWT' })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 401, description: 'Invalid Clerk token' })
+  async verifyClerkToken(@Body() dto: ClerkTokenDto) {
+    return this.authService.verifyClerkToken(dto.clerkToken);
   }
 
-  @Public()
-  @Post('firebase')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login with Firebase ID token (Google/Apple)' })
-  @ApiResponse({ status: 200, description: 'Firebase login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid Firebase token' })
-  async firebaseLogin(@Body() dto: FirebaseLoginDto) {
-    return this.authService.firebaseLogin(dto);
-  }
-
+  /**
+   * Refresh access token using refresh token
+   */
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -53,6 +36,9 @@ export class AuthController {
     return this.authService.refreshTokens(dto.refreshToken);
   }
 
+  /**
+   * Logout and revoke refresh token
+   */
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)

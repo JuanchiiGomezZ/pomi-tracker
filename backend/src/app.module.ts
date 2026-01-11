@@ -15,13 +15,14 @@ import { MailModule } from './shared/mail';
 import { StorageModule } from './shared/storage';
 
 // Feature modules
-import { AuthModule, JwtAuthGuard, RolesGuard } from './modules/auth';
+import { AuthModule, ClerkAuthGuard, RolesGuard } from './modules/auth';
 import { UsersModule } from './modules/users';
 import { BlocksModule } from './modules/blocks';
 import { TasksModule } from './modules/tasks';
 import { TaskInstancesModule } from './modules/task-instances';
 import { InsightsModule } from './modules/insights';
 import { SyncModule } from './modules/sync';
+import { WebhooksModule } from './modules/webhooks';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SyncModule } from './modules/sync';
     TaskInstancesModule,
     InsightsModule,
     SyncModule,
+    WebhooksModule,
   ],
   providers: [
     // Global exception filter
@@ -60,10 +62,10 @@ import { SyncModule } from './modules/sync';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    // Global JWT authentication
+    // Global Clerk authentication
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: ClerkAuthGuard,
     },
     // Global roles authorization
     {

@@ -40,7 +40,7 @@ model Organization {
   @@map("organizations")
 }
 
-/// User model with role-based access control and Firebase auth support
+/// User model with role-based access control and Clerk auth support
 model User {
   id              String   @id @default(uuid())
   email           String   @unique
@@ -52,8 +52,8 @@ model User {
   isActive        Boolean  @default(true) @map("is_active")
   emailVerified   Boolean  @default(false) @map("email_verified")
 
-  // Firebase Auth
-  firebaseUid     String?  @unique @map("firebase_uid")
+  // Clerk Auth
+  clerkId         String?  @unique @map("clerk_id")
 
   // App-specific settings
   timezone            String   @default("UTC")
@@ -84,7 +84,7 @@ model User {
   tasks           Task[]
 
   @@index([email])
-  @@index([firebaseUid])
+  @@index([clerkId])
   @@index([organizationId])
   @@map("users")
 }

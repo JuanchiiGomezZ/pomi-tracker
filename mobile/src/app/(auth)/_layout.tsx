@@ -1,20 +1,18 @@
-import { useEffect } from 'react';
-import { router, Stack } from 'expo-router';
-import { useAuthStore, selectIsAuthenticated, selectIsLoading } from '@/features/auth/stores/auth.store';
+import { useEffect } from "react";
+import { router, Stack } from "expo-router";
+import { useAuthSession } from "@/features/auth/hooks/useAuthSession";
 
 export default function AuthLayout() {
-  const isAuthenticated = useAuthStore(selectIsAuthenticated);
-  const isLoading = useAuthStore(selectIsLoading);
+  const { isReady, isAuthenticated } = useAuthSession();
 
   useEffect(() => {
-    // Redirect to dashboard if already authenticated
-    if (!isLoading && isAuthenticated) {
-      //TODO: Navigate to dashboard
+    // Redirect to home if already fully authenticated (Clerk + backend)
+    if (isReady && isAuthenticated) {
+      router.replace("/(tool)/home");
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isReady, isAuthenticated]);
 
-  // Don't render auth screens if loading or already authenticated
-  if (isLoading || isAuthenticated) {
+  if (!isReady) {
     return null;
   }
 
@@ -22,11 +20,13 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'fade',
+        animation: "fade",
       }}
     >
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="terms" />
+      <Stack.Screen name="privacy" />
     </Stack>
   );
 }

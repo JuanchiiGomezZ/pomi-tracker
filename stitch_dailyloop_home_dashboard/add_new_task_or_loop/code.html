@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DailyLoop - Add Task</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Playfair+Display:ital,wght@0,600;1,600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined|Material+Icons+Round" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#111111", // Keeping the strong black/dark grey as primary
+              "background-light": "#F5F5F7", // Light grey background seen in screenshot
+              "background-dark": "#1C1C1E", // Dark mode background
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#2C2C2E",
+              "text-secondary-light": "#6B7280",
+              "text-secondary-dark": "#9CA3AF",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              display: ["Playfair Display", "serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              'xl': '1.5rem',
+              '2xl': '2rem',
+              '3xl': '2.5rem',
+            },
+            boxShadow: {
+              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+              'glow': '0 0 15px rgba(0, 0, 0, 0.1)',
+            }
+          },
+        },
+      };
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-sans antialiased text-gray-900 dark:text-white h-screen overflow-hidden relative transition-colors duration-300">
+<div aria-hidden="true" class="absolute inset-0 z-0 opacity-40 blur-sm pointer-events-none transition-all duration-300 bg-background-light dark:bg-background-dark">
+<div class="px-6 pt-14 pb-4 flex justify-between items-start">
+<div>
+<h1 class="font-display text-2xl font-semibold mb-1 text-gray-900 dark:text-white">Hey, Karthik 👋🏽</h1>
+<p class="font-display italic text-gray-500 dark:text-gray-400">Let's make progress today!</p>
+</div>
+<button class="p-2 bg-white dark:bg-surface-dark rounded-full shadow-sm">
+<span class="material-icons-outlined text-gray-600 dark:text-gray-300">light_mode</span>
+</button>
+</div>
+<div class="px-6 mb-6">
+<div class="bg-white dark:bg-surface-dark rounded-3xl p-4 shadow-soft flex justify-between items-center text-center">
+<div class="flex flex-col items-center space-y-1">
+<span class="text-xs text-gray-400 dark:text-gray-500">Mon</span>
+<span class="text-sm font-medium text-gray-400 dark:text-gray-500">8</span>
+</div>
+<div class="flex flex-col items-center space-y-1">
+<span class="text-xs text-gray-400 dark:text-gray-500">Tue</span>
+<span class="text-sm font-medium text-gray-400 dark:text-gray-500">9</span>
+</div>
+<div class="flex flex-col items-center space-y-1 bg-gray-100 dark:bg-gray-700 rounded-2xl px-3 py-2 -mx-1">
+<span class="text-xs font-semibold text-gray-900 dark:text-white">Wed</span>
+<span class="text-lg font-bold text-gray-900 dark:text-white">10</span>
+</div>
+<div class="flex flex-col items-center space-y-1">
+<span class="text-xs text-gray-400 dark:text-gray-500">Thu</span>
+<span class="text-sm font-medium text-gray-400 dark:text-gray-500">11</span>
+</div>
+<div class="flex flex-col items-center space-y-1">
+<span class="text-xs text-gray-400 dark:text-gray-500">Fri</span>
+<span class="text-sm font-medium text-gray-400 dark:text-gray-500">12</span>
+</div>
+</div>
+</div>
+<div class="px-6 mb-6">
+<div class="bg-white dark:bg-surface-dark rounded-full p-1.5 flex shadow-soft">
+<button class="flex-1 py-2 px-4 rounded-full bg-primary text-white text-sm font-medium flex items-center justify-center gap-2">
+<span class="material-icons-round text-base">wb_sunny</span> To do
+                </button>
+<button class="flex-1 py-2 px-4 rounded-full text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center justify-center gap-2">
+<span class="material-icons-round text-base">check</span> Completed
+                </button>
+</div>
+</div>
+<div class="px-6 space-y-6">
+<div>
+<h3 class="flex items-center text-sm font-semibold text-gray-900 dark:text-white mb-3">
+<span class="material-icons-round text-lg mr-1 rotate-90">play_arrow</span> Morning
+                </h3>
+<div class="space-y-3">
+<div class="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-soft flex items-center gap-3">
+<div class="w-5 h-5 rounded-md border-2 border-gray-200 dark:border-gray-600"></div>
+<span class="text-lg">⏰</span>
+<span class="text-sm font-medium">Wake up on time</span>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-soft flex items-center gap-3">
+<div class="w-5 h-5 rounded-md border-2 border-gray-200 dark:border-gray-600"></div>
+<span class="text-lg">🏋️</span>
+<span class="text-sm font-medium">Gym / workout</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-black/30 dark:bg-black/60 z-10 backdrop-blur-sm transition-opacity duration-300"></div>
+<div class="fixed bottom-0 left-0 right-0 z-20 flex flex-col justify-end h-screen pointer-events-none">
+<div class="w-full bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] p-6 pb-10 shadow-2xl transform transition-transform duration-300 pointer-events-auto h-auto max-h-[85vh] overflow-y-auto">
+<div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-8"></div>
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-2xl font-display font-semibold text-gray-900 dark:text-white">New Item</h2>
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+<span class="material-icons-round text-2xl">close</span>
+</button>
+</div>
+<div class="mb-8 relative">
+<input autofocus="" class="w-full bg-transparent border-0 border-b-2 border-gray-200 dark:border-gray-700 px-0 py-3 text-2xl font-medium placeholder-gray-300 dark:placeholder-gray-600 focus:ring-0 focus:border-primary transition-colors text-gray-900 dark:text-white" placeholder="What needs to be done?" type="text"/>
+</div>
+<div class="mb-8">
+<label class="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider mb-3">Choose Icon</label>
+<div class="flex gap-3 overflow-x-auto no-scrollbar py-2">
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors ring-2 ring-primary ring-offset-2 dark:ring-offset-surface-dark">
+                        ✨
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors">
+                        🏋️
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors">
+                        📚
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors">
+                        💻
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors">
+                        🧘
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-2xl transition-colors">
+                        🥗
+                    </button>
+<button class="flex-shrink-0 w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 border-dashed border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400">
+<span class="material-icons-round">add_reaction</span>
+</button>
+</div>
+</div>
+<div class="mb-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm flex items-center justify-center text-primary dark:text-white">
+<span class="material-icons-round">all_inclusive</span>
+</div>
+<div>
+<p class="font-semibold text-gray-900 dark:text-white">Make it a Loop</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Recurring habit</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="mb-10 animate-fade-in-down">
+<label class="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider mb-3">Repeat On</label>
+<div class="flex justify-between gap-2">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white shadow-glow">M</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white shadow-glow">T</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white shadow-glow">W</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white shadow-glow">T</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-primary text-white shadow-glow">F</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">S</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">S</button>
+</div>
+</div>
+<button class="w-full bg-primary text-white font-semibold py-4 rounded-[2rem] text-lg shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                Create Loop
+                <span class="material-icons-round text-sm">arrow_forward</span>
+</button>
+<div class="h-6"></div>
+</div>
+</div>
+
+</body></html>

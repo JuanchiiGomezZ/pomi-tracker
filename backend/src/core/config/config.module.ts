@@ -8,6 +8,7 @@ import {
   throttleConfig,
   storageConfig,
   mailConfig,
+  clerkConfig,
 } from './config.namespaces';
 
 @Module({
@@ -21,6 +22,7 @@ import {
         throttleConfig,
         storageConfig,
         mailConfig,
+        clerkConfig,
       ],
       validate: (config) => {
         const parsed = envSchema.safeParse(config);

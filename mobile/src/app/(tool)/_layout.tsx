@@ -1,24 +1,19 @@
 import { useEffect } from "react";
 import { router, Tabs } from "expo-router";
-import {
-  useAuthStore,
-  selectIsAuthenticated,
-  selectIsLoading,
-} from "@/features/auth/stores/auth.store";
+import { useAuthSession } from "@/features/auth/hooks/useAuthSession";
 
 export default function ToolLayout() {
-  const isAuthenticated = useAuthStore(selectIsAuthenticated);
-  const isLoading = useAuthStore(selectIsLoading);
+  const { isReady, isAuthenticated } = useAuthSession();
 
   useEffect(() => {
     // Redirect to login if not authenticated
-    if (!isLoading && !isAuthenticated) {
+    if (isReady && !isAuthenticated) {
       router.replace("/(auth)/login");
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isReady, isAuthenticated]);
 
   // Don't render protected screens if loading or not authenticated
-  if (isLoading || !isAuthenticated) { 
+  if (!isReady || !isAuthenticated) {
     return null;
   }
 
@@ -27,6 +22,9 @@ export default function ToolLayout() {
       screenOptions={{
         headerShown: true,
       }}
-    ></Tabs>
+      initialRouteName="home"
+    >
+      <Tabs.Screen name="home" options={{}} />
+    </Tabs>
   );
 }

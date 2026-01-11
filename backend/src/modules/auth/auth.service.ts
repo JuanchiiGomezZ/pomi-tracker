@@ -1,271 +1,160 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../core/database/prisma.service';
-import { RegisterDto, LoginDto, FirebaseLoginDto } from './dto/auth.dto';
-import { FirebaseService } from '../../shared/auth/firebase.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly clerkClient;
+  private readonly clerkSecretKey: string;
+  private readonly clerkJwtKey: string | undefined;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly firebaseService: FirebaseService,
-  ) {}
-
-  async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+  ) {
+    this.clerkSecretKey =
+      this.configService.get<string>('clerk.secretKey') || '';
+    this.clerkJwtKey = this.configService.get<string>('clerk.jwtKey');
+    this.clerkClient = createClerkClient({
+      secretKey: this.clerkSecretKey,
     });
-
-    if (existingUser) {
-      throw new ConflictException('Email already registered');
-    }
-
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashedPassword,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        createdAt: user.createdAt,
-      },
-      ...tokens,
-    };
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email, deletedAt: null },
-    });
+  /**
+   * Verify Clerk token and exchange for internal JWT tokens
+   * This is called after Clerk authentication on the frontend
+   */
+  async verifyClerkToken(clerkToken: string) {
+    try {
+      // Use verifyToken function to validate the JWT
+      const payload = await verifyToken(clerkToken, {
+        secretKey: this.clerkSecretKey,
+        jwtKey: this.clerkJwtKey,
+      });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      const clerkUserId = payload.sub;
+
+      if (!clerkUserId) {
+        throw new UnauthorizedException('No user ID in Clerk token');
+      }
+
+      // Get user details from Clerk
+      const clerkUser = await this.clerkClient.users.getUser(clerkUserId);
+      const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+      // Find or create user based on Clerk ID
+      let user = await this.prisma.user.findUnique({
+        where: { clerkId: clerkUserId },
+      });
+
+      if (!user) {
+        // Try to find by email and link accounts
+        if (email) {
+          user = await this.prisma.user.findUnique({
+            where: { email },
+          });
+
+          if (user) {
+            // Link existing user to Clerk
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { clerkId: clerkUserId },
+            });
+            this.logger.log(
+              `Linked existing user ${email} to Clerk ID ${clerkUserId}`,
+            );
+          }
+        }
+
+        // If still no user, create new one
+        if (!user) {
+          user = await this.prisma.user.create({
+            data: {
+              email: email || `${clerkUserId}@clerk.local`,
+              clerkId: clerkUserId,
+              firstName: clerkUser.firstName,
+              lastName: clerkUser.lastName,
+              avatarUrl: clerkUser.imageUrl,
+              emailVerified:
+                clerkUser.emailAddresses?.[0]?.verification?.status ===
+                'verified',
+            },
+          });
+          this.logger.log(
+            `Created new user from Clerk: ${email || clerkUserId}`,
+          );
+        }
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('Account is inactive');
+      }
+
+      // Generate internal JWT tokens
+      const tokens = await this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.organizationId ?? undefined,
+      );
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatarUrl: user.avatarUrl,
+          role: user.role,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          clerkId: user.clerkId,
+        },
+        ...tokens,
+      };
+    } catch (error) {
+      this.logger.error('Clerk token verification failed', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Authentication failed');
     }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is inactive');
-    }
-
-    if (!user.password) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const tokens = await this.generateTokens(
-      user.id,
-      user.email,
-      user.role,
-      user.organizationId ?? undefined,
-    );
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-      },
-      ...tokens,
-    };
   }
 
-  async firebaseLogin(dto: FirebaseLoginDto): Promise<{
-    user: {
-      id: string;
-      email: string;
-      firstName: string | null;
-      lastName: string | null;
-      avatarUrl: string | null;
-      role: string;
-      timezone: string;
-      dayCutoffHour: number;
-      currentStreak: number;
-      bestStreak: number;
-      createdAt: Date;
-    };
-    accessToken: string;
-    refreshToken: string;
-  }> {
-    // Verify Firebase ID token
-    const firebaseToken = await this.firebaseService.verifyIdToken(dto.idToken);
-
-    const firebaseUid = firebaseToken.uid;
-    const email = firebaseToken.email ?? null;
-    const email_verified = firebaseToken.email_verified ?? false;
-    const name = (firebaseToken as { name?: string }).name ?? null;
-    const picture = firebaseToken.picture ?? null;
+  /**
+   * Sync user data from Clerk (called from webhook)
+   */
+  async syncClerkUser(clerkId: string) {
+    const clerkUser = await this.clerkClient.users.getUser(clerkId);
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress;
 
     if (!email) {
-      throw new UnauthorizedException('Email not available from Firebase');
+      throw new UnauthorizedException('No email found in Clerk user');
     }
 
-    // Check if user exists by firebaseUid or email
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ firebaseUid }, { email }],
-        deletedAt: null,
-      },
-    });
-
-    let userId: string;
-
-    // If user doesn't exist, create new user
-    if (!existingUser) {
-      const newUser = await this.prisma.user.create({
-        data: {
-          email,
-          firebaseUid,
-          emailVerified: email_verified,
-          firstName: dto.firstName || this.extractFirstName(name),
-          lastName: dto.lastName || this.extractLastName(name),
-          avatarUrl: picture || dto.avatarUrl,
-          timezone: dto.timezone || 'UTC',
-          dayCutoffHour: dto.dayCutoffHour ?? 3,
-        },
-      });
-      userId = newUser.id;
-    } else {
-      userId = existingUser.id;
-
-      // Update existing user's Firebase UID if not set
-      if (!existingUser.firebaseUid) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { firebaseUid },
-        });
-      }
-
-      // Update FCM token if provided
-      if (dto.fcmToken) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { fcmToken: dto.fcmToken },
-        });
-      }
-
-      // Update timezone and dayCutoffHour if provided
-      if (dto.timezone || dto.dayCutoffHour !== undefined) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: {
-            ...(dto.timezone && { timezone: dto.timezone }),
-            ...(dto.dayCutoffHour !== undefined && {
-              dayCutoffHour: dto.dayCutoffHour,
-            }),
-          },
-        });
-      }
-    }
-
-    // Fetch user data
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        role: true,
-        timezone: true,
-        dayCutoffHour: true,
-        currentStreak: true,
-        bestStreak: true,
-        createdAt: true,
-        organizationId: true,
-        isActive: true,
-      },
+      where: { clerkId },
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is inactive');
-    }
-
-    // Generate JWT tokens
-    const tokens = await this.generateTokens(
-      user.id,
-      user.email,
-      user.role,
-      user.organizationId ?? undefined,
-    );
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        timezone: user.timezone,
-        dayCutoffHour: user.dayCutoffHour,
-        currentStreak: user.currentStreak,
-        bestStreak: user.bestStreak,
-        createdAt: user.createdAt,
+    // Update user data from Clerk
+    return this.prisma.user.update({
+      where: { clerkId },
+      data: {
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        avatarUrl: clerkUser.imageUrl,
+        emailVerified:
+          clerkUser.emailAddresses?.[0]?.verification?.status === 'verified',
       },
-      ...tokens,
-    };
-  }
-
-  /**
-   * Extract first name from Firebase display name
-   */
-  private extractFirstName(displayName: string | null): string | null {
-    if (!displayName) return null;
-    const parts = displayName.split(' ');
-    return parts[0] || null;
-  }
-
-  /**
-   * Extract last name from Firebase display name
-   */
-  private extractLastName(displayName: string | null): string | null {
-    if (!displayName) return null;
-    const parts = displayName.split(' ');
-    return parts.length > 1 ? parts.slice(1).join(' ') : null;
+    });
   }
 
   async refreshTokens(refreshToken: string) {
@@ -324,7 +213,6 @@ export class AuthService {
     const expiresInStr =
       this.configService.get<string>('jwt.expiresIn') || '15m';
 
-    // Parse expiry string to get seconds for JWT
     const expiresIn = this.parseExpiryToSeconds(expiresInStr);
 
     const accessToken = this.jwtService.sign(payload, {
@@ -337,7 +225,6 @@ export class AuthService {
       this.configService.get<string>('jwt.refreshExpiresIn') || '7d';
     const expiresAt = new Date();
 
-    // Parse refresh expiry (e.g., '7d', '30d')
     const refreshSeconds = this.parseExpiryToSeconds(refreshExpiresIn);
     expiresAt.setSeconds(expiresAt.getSeconds() + refreshSeconds);
 

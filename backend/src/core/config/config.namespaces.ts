@@ -38,3 +38,10 @@ export const mailConfig = registerAs('mail', () => ({
   pass: process.env.SMTP_PASS,
   from: process.env.SMTP_FROM || 'noreply@example.com',
 }));
+
+export const clerkConfig = registerAs('clerk', () => ({
+  secretKey: process.env.CLERK_SECRET_KEY,
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+  webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+  jwtKey: process.env.CLERK_JWT_KEY,
+}));

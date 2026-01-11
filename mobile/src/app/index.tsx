@@ -1,15 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { router, useRootNavigationState } from "expo-router";
-import { useAuthStore, selectIsAuthenticated } from "@/features/auth/stores/auth.store";
 import { ScreenWrapper } from "@/shared/components/ui";
+import { useAuthSession } from "@/features/auth/hooks/useAuthSession";
 
 export default function Index() {
-  const isAuthenticated = useAuthStore(selectIsAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const { isReady, isAuthenticated } = useAuthSession();
   const rootNavigationState = useRootNavigationState();
   const [isLayoutReady, setIsLayoutReady] = useState(false);
 
-  // Callback que se llama cuando el navigator está listo
+  // Callback when navigator is ready
   const onNavigationStateChange = useCallback(() => {
     if (rootNavigationState?.key != null) {
       setIsLayoutReady(true);
@@ -21,22 +20,21 @@ export default function Index() {
   }, [onNavigationStateChange]);
 
   useEffect(() => {
-    // Solo navegar cuando:
-    // 1. El layout esté listo
-    // 2. La carga auth haya terminado
-    if (!isLayoutReady || isLoading) return;
+    // Only navigate when:
+    // 1. Layout is ready
+    // 2. Auth is fully loaded (Clerk + backend sync complete)
+    if (!isLayoutReady || !isReady) return;
 
-    // Usar setTimeout para asegurar que el navigator está completamente listo
     const timer = setTimeout(() => {
       if (isAuthenticated) {
-        //TODO: Navigate to dashboard
+        router.replace("/(tool)/home");
       } else {
         router.replace("/(auth)/login");
       }
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [isLayoutReady, isLoading, isAuthenticated]);
+  }, [isLayoutReady, isReady, isAuthenticated]);
 
   return <ScreenWrapper loading centered />;
 }
