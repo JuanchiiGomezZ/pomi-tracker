@@ -40,32 +40,49 @@ model Organization {
   @@map("organizations")
 }
 
-/// User model with role-based access control
+/// User model with role-based access control and Firebase auth support
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  password       String
-  firstName      String?  @map("first_name")
-  lastName       String?  @map("last_name")
-  role           Role     @default(USER)
-  isActive       Boolean  @default(true) @map("is_active")
-  emailVerified  Boolean  @default(false) @map("email_verified")
-  
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String?  // Nullable for OAuth users
+  firstName       String?  @map("first_name")
+  lastName        String?  @map("last_name")
+  avatarUrl       String?  @map("avatar_url")
+  role            Role     @default(USER)
+  isActive        Boolean  @default(true) @map("is_active")
+  emailVerified   Boolean  @default(false) @map("email_verified")
+
+  // Firebase Auth
+  firebaseUid     String?  @unique @map("firebase_uid")
+
+  // App-specific settings
+  timezone        String   @default("UTC")
+  dayCutoffHour   Int      @default(3) @map("day_cutoff_hour") // Hour of day when day resets (0-6)
+  fcmToken        String?  @map("fcm_token") // Firebase Cloud Messaging token
+
+  // Gamification
+  currentStreak   Int      @default(0) @map("current_streak")
+  bestStreak      Int      @default(0) @map("best_streak")
+  lastActiveDate  DateTime? @map("last_active_date")
+
   // Multi-tenancy
-  organizationId String?  @map("organization_id")
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  
+  organizationId  String?  @map("organization_id")
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+
   // Audit fields
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-  createdBy      String?  @map("created_by")
-  updatedBy      String?  @map("updated_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdBy       String?  @map("created_by")
+  updatedBy       String?  @map("updated_by")
 
   // Relations
-  refreshTokens  RefreshToken[]
+  refreshTokens   RefreshToken[]
+  blocks          Block[]
+  tasks           Task[]
 
   @@index([email])
+  @@index([firebaseUid])
   @@index([organizationId])
   @@map("users")
 }
@@ -88,4 +105,110 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@map("refresh_tokens")
+}
+
+/// Block model - Container for daily loops/tasks
+model Block {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String?  // Emoji or icon name
+  color       String?  // Hex color code
+  sortOrder   Int      @default(0) @map("sort_order")
+  isArchived  Boolean  @default(false) @map("is_archived")
+
+  // Active days for weekly schedule (0=Sun, 1=Mon, ..., 6=Sat)
+  // Block only shows on these days unless it has tasks
+  activeDays  Int[]    @default([0,1,2,3,4,5,6]) @map("active_days")
+
+  // User relationship (DailyLoop is personal, no org)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Audit fields
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tasks       Task[]
+
+  @@index([userId])
+  @@map("blocks")
+}
+
+/// Task model - Individual daily loop items
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  emoji       String?   // Visual indicator
+  sortOrder   Int       @default(0) @map("sort_order")
+  isArchived  Boolean   @default(false) @map("is_archived")
+
+  // Task type: true = one-off, false = loop/recurring
+  isOneOff    Boolean   @default(false) @map("is_one_off")
+
+  // One-off specific
+  dueDate     DateTime? @db.Date @map("due_date")
+
+  // Loop specific
+  frequency   Frequency @default(DAILY) @map("frequency")
+  daysOfWeek  Int[]     @default([1,2,3,4,5,6,0]) @map("days_of_week") // 0=Sun, 1=Mon, etc.
+  skipDays    Int       @default(0) @map("skip_days") // Skip N days after completion
+  resetDays   Int       @default(0) @map("reset_days") // Reset N days after last completion
+
+  // User relationship
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Block relationship
+  blockId     String?   @map("block_id")
+  block       Block?    @relation(fields: [blockId], references: [id], onDelete: SetNull)
+
+  // Audit fields
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  instances   TaskInstance[]
+
+  @@index([userId])
+  @@index([blockId])
+  @@map("tasks")
+}
+
+/// Task instance - Actual task occurrence for a specific day
+model TaskInstance {
+  id          String           @id @default(uuid())
+  date        DateTime         @db.Date // The date this instance is for
+  status      InstanceStatus   @default(PENDING) @map("status")
+  notes       String?
+  completedAt DateTime?        @map("completed_at")
+
+  // Task relationship
+  taskId      String           @map("task_id")
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Audit fields
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([taskId, date]) // One instance per task per day
+  @@index([taskId])
+  @@index([date])
+  @@map("task_instances")
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum InstanceStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  MISSED
 }

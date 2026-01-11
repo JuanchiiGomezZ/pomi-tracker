@@ -8,7 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../core/database/prisma.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, FirebaseLoginDto } from './dto/auth.dto';
+import { FirebaseService } from '../../shared/auth/firebase.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -41,6 +43,7 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
+        avatarUrl: true,
         role: true,
         createdAt: true,
       },
@@ -49,7 +52,15 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return {
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
       ...tokens,
     };
   }
@@ -65,6 +76,10 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new UnauthorizedException('Account is inactive');
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
@@ -86,10 +101,171 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
         role: user.role,
       },
       ...tokens,
     };
+  }
+
+  async firebaseLogin(dto: FirebaseLoginDto): Promise<{
+    user: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      avatarUrl: string | null;
+      role: string;
+      timezone: string;
+      dayCutoffHour: number;
+      currentStreak: number;
+      bestStreak: number;
+      createdAt: Date;
+    };
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    // Verify Firebase ID token
+    const firebaseToken = await this.firebaseService.verifyIdToken(dto.idToken);
+
+    const firebaseUid = firebaseToken.uid;
+    const email = firebaseToken.email ?? null;
+    const email_verified = firebaseToken.email_verified ?? false;
+    const name = (firebaseToken as { name?: string }).name ?? null;
+    const picture = firebaseToken.picture ?? null;
+
+    if (!email) {
+      throw new UnauthorizedException('Email not available from Firebase');
+    }
+
+    // Check if user exists by firebaseUid or email
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ firebaseUid }, { email }],
+        deletedAt: null,
+      },
+    });
+
+    let userId: string;
+
+    // If user doesn't exist, create new user
+    if (!existingUser) {
+      const newUser = await this.prisma.user.create({
+        data: {
+          email,
+          firebaseUid,
+          emailVerified: email_verified,
+          firstName: dto.firstName || this.extractFirstName(name),
+          lastName: dto.lastName || this.extractLastName(name),
+          avatarUrl: picture || dto.avatarUrl,
+          timezone: dto.timezone || 'UTC',
+          dayCutoffHour: dto.dayCutoffHour ?? 3,
+        },
+      });
+      userId = newUser.id;
+    } else {
+      userId = existingUser.id;
+
+      // Update existing user's Firebase UID if not set
+      if (!existingUser.firebaseUid) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { firebaseUid },
+        });
+      }
+
+      // Update FCM token if provided
+      if (dto.fcmToken) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { fcmToken: dto.fcmToken },
+        });
+      }
+
+      // Update timezone and dayCutoffHour if provided
+      if (dto.timezone || dto.dayCutoffHour !== undefined) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            ...(dto.timezone && { timezone: dto.timezone }),
+            ...(dto.dayCutoffHour !== undefined && {
+              dayCutoffHour: dto.dayCutoffHour,
+            }),
+          },
+        });
+      }
+    }
+
+    // Fetch user data
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        role: true,
+        timezone: true,
+        dayCutoffHour: true,
+        currentStreak: true,
+        bestStreak: true,
+        createdAt: true,
+        organizationId: true,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+
+    // Generate JWT tokens
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.organizationId ?? undefined,
+    );
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        timezone: user.timezone,
+        dayCutoffHour: user.dayCutoffHour,
+        currentStreak: user.currentStreak,
+        bestStreak: user.bestStreak,
+        createdAt: user.createdAt,
+      },
+      ...tokens,
+    };
+  }
+
+  /**
+   * Extract first name from Firebase display name
+   */
+  private extractFirstName(displayName: string | null): string | null {
+    if (!displayName) return null;
+    const parts = displayName.split(' ');
+    return parts[0] || null;
+  }
+
+  /**
+   * Extract last name from Firebase display name
+   */
+  private extractLastName(displayName: string | null): string | null {
+    if (!displayName) return null;
+    const parts = displayName.split(' ');
+    return parts.length > 1 ? parts.slice(1).join(' ') : null;
   }
 
   async refreshTokens(refreshToken: string) {

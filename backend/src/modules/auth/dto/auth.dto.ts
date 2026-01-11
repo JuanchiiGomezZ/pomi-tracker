@@ -22,3 +22,15 @@ export const refreshTokenSchema = z.object({
 });
 
 export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}
+
+export const firebaseLoginSchema = z.object({
+  idToken: z.string().min(1, 'Firebase ID token is required'),
+  fcmToken: z.string().optional(),
+  timezone: z.string().optional(),
+  dayCutoffHour: z.number().min(0).max(23).optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  avatarUrl: z.string().url().optional(),
+});
+
+export class FirebaseLoginDto extends createZodDto(firebaseLoginSchema) {}
