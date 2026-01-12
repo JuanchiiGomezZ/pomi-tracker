@@ -8,8 +8,10 @@
     "name": {
       "title": "What's your name?",
       "subtitle": "We'll use this to personalize your experience",
-      "inputLabel": "Your name",
-      "placeholder": "Enter your name"
+      "firstNameLabel": "First Name",
+      "firstNamePlaceholder": "Your first name",
+      "lastNameLabel": "Last Name",
+      "lastNamePlaceholder": "Your last name"
     },
     "blocks": {
       "title": "Create your blocks",

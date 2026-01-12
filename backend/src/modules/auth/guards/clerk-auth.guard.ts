@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Injectable,
   CanActivate,
@@ -90,9 +93,9 @@ export class ClerkAuthGuard implements CanActivate {
         throw new UnauthorizedException('No user ID in token');
       }
 
-      // Find or create user
-      let dbUser = await this.prisma.user.findUnique({
-        where: { clerkId },
+      // Find or create user - exclude soft-deleted users
+      let dbUser = await this.prisma.user.findFirst({
+        where: { clerkId, deletedAt: null },
         select: {
           id: true,
           email: true,
@@ -105,9 +108,39 @@ export class ClerkAuthGuard implements CanActivate {
       this.logger.debug(`Database user found: ${!!dbUser}`);
 
       if (!dbUser) {
-        // Auto-create user on first request using token info
-        this.logger.log(`Creating new user from Clerk: ${clerkId}`);
-        dbUser = await this.createUserFromClerk(clerkId, payload);
+        // Check if there's a soft-deleted user with this clerkId - recover it
+        const deletedUser = await this.prisma.user.findFirst({
+          where: { clerkId },
+          select: { id: true, email: true },
+        });
+
+        if (deletedUser) {
+          // Recover the deleted user instead of creating new one
+          this.logger.log(`Recovering soft-deleted user: ${clerkId}`);
+          dbUser = await this.prisma.user.update({
+            where: { id: deletedUser.id },
+            data: {
+              deletedAt: null,
+              firstName:
+                payload.first_name ||
+                payload.given_name ||
+                payload.name ||
+                null,
+              lastName: payload.last_name || payload.family_name || null,
+            },
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              organizationId: true,
+              isActive: true,
+            },
+          });
+        } else {
+          // Auto-create new user on first request
+          this.logger.log(`Creating new user from Clerk: ${clerkId}`);
+          dbUser = await this.createUserFromClerk(clerkId, payload);
+        }
       }
 
       if (!dbUser.isActive) {
@@ -139,12 +172,23 @@ export class ClerkAuthGuard implements CanActivate {
   }
 
   private async createUserFromClerk(clerkId: string, tokenPayload: any) {
-    // Extract user info from token payload (no API call needed)
-    // Clerk tokens contain: sub, sid, email, firstName, lastName if configured
+    // Extract user info from token payload
+    // Clerk tokens may contain: sub, sid, email, firstName, lastName depending on configuration
     const email = tokenPayload.email || tokenPayload.email_address || '';
     const firstName =
-      tokenPayload.first_name || tokenPayload.given_name || null;
+      tokenPayload.first_name ||
+      tokenPayload.given_name ||
+      tokenPayload.name ||
+      null;
     const lastName = tokenPayload.last_name || tokenPayload.family_name || null;
+
+    // Log what we received for debugging
+    this.logger.debug(
+      `Creating user from Clerk - email: ${email}, firstName: ${firstName}, lastName: ${lastName}`,
+    );
+    this.logger.debug(
+      `Full token payload keys: ${Object.keys(tokenPayload).join(', ')}`,
+    );
 
     // Create user in database with token info
     const user = await this.prisma.user.create({

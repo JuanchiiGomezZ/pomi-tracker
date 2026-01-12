@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/shared/utils/storage';
-import type { Block, SuggestedLoop, DEFAULT_BLOCKS, CreateBlockDto } from '../types';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { zustandStorage } from "@/shared/utils/storage";
+import type { Block, SuggestedLoop, DEFAULT_BLOCKS, CreateBlockDto } from "../types";
 
 interface OnboardingStoreState {
   // Current step (0-indexed, total steps = 4)
@@ -10,6 +10,7 @@ interface OnboardingStoreState {
 
   // Step 1: Name
   firstName: string;
+  lastName: string;
 
   // Step 2: Blocks
   blocks: Block[];
@@ -29,6 +30,7 @@ interface OnboardingStoreState {
   prevStep: () => void;
 
   setFirstName: (name: string) => void;
+  setLastName: (name: string) => void;
 
   updateBlock: (id: string, updates: Partial<Block>) => void;
   addBlock: (block: Block) => void;
@@ -52,7 +54,8 @@ interface OnboardingStoreState {
 const initialState = {
   currentStep: 0,
   totalSteps: 4,
-  firstName: '',
+  firstName: "",
+  lastName: "",
   blocks: [],
   originalDefaultBlocks: [] as typeof DEFAULT_BLOCKS,
   selectedLoops: [],
@@ -83,13 +86,12 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
       },
 
       setFirstName: (firstName) => set({ firstName }),
+      setLastName: (lastName) => set({ lastName }),
 
       updateBlock: (id, updates) => {
         const { blocks } = get();
         set({
-          blocks: blocks.map((block) =>
-            block.id === id ? { ...block, ...updates } : block
-          ),
+          blocks: blocks.map((block) => (block.id === id ? { ...block, ...updates } : block)),
         });
       },
 
@@ -106,20 +108,22 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
       resetBlocks: () => {
         const { originalDefaultBlocks } = get();
         // Convert default blocks to temporary blocks with temp IDs
-        const tempBlocks: Block[] = originalDefaultBlocks.map((defaultBlock: CreateBlockDto, index: number) => ({
-          id: `temp-${index}`,
-          name: defaultBlock.name || '',
-          description: defaultBlock.description,
-          icon: defaultBlock.icon,
-          color: defaultBlock.color,
-          sortOrder: defaultBlock.sortOrder ?? index,
-          activeDays: defaultBlock.activeDays ?? [0, 1, 2, 3, 4, 5, 6],
-          reminderEnabled: defaultBlock.reminderEnabled ?? false,
-          reminderHour: defaultBlock.reminderHour,
-          userId: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
+        const tempBlocks: Block[] = originalDefaultBlocks.map(
+          (defaultBlock: CreateBlockDto, index: number) => ({
+            id: `temp-${index}`,
+            name: defaultBlock.name || "",
+            description: defaultBlock.description,
+            icon: defaultBlock.icon,
+            color: defaultBlock.color,
+            sortOrder: defaultBlock.sortOrder ?? index,
+            activeDays: defaultBlock.activeDays ?? [0, 1, 2, 3, 4, 5, 6],
+            reminderEnabled: defaultBlock.reminderEnabled ?? false,
+            reminderHour: defaultBlock.reminderHour,
+            userId: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+        );
         set({ blocks: tempBlocks });
       },
 
@@ -142,10 +146,10 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
       reset: () => set(initialState),
 
       canProceed: () => {
-        const { currentStep, firstName, blocks } = get();
+        const { currentStep, firstName, lastName, blocks } = get();
         switch (currentStep) {
           case 0: // Name step
-            return firstName.trim().length > 0;
+            return firstName.trim().length > 0 && lastName.trim().length > 0;
           case 1: // Blocks step
             return blocks.length >= 1;
           case 2: // Loops step
@@ -163,11 +167,12 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
       },
     }),
     {
-      name: 'onboarding-storage',
+      name: "onboarding-storage",
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentStep: state.currentStep,
         firstName: state.firstName,
+        lastName: state.lastName,
         blocks: state.blocks,
         selectedLoops: state.selectedLoops,
         dayCloseEnabled: state.dayCloseEnabled,

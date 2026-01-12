@@ -1,17 +1,22 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const onboardingNameSchema = z.object({
   firstName: z
     .string()
-    .min(1, 'Name is required')
-    .max(50, 'Name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s]+$/, 'Name can only contain letters'),
+    .min(1, "First name is required")
+    .max(50, "First name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s]+$/, "First name can only contain letters"),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(50, "Last name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s]+$/, "Last name can only contain letters"),
 });
 
 export type OnboardingNameData = z.infer<typeof onboardingNameSchema>;
 
 export const createBlockSchema = z.object({
-  name: z.string().min(1, 'Block name is required').max(30, 'Name too long'),
+  name: z.string().min(1, "Block name is required").max(30, "Name too long"),
   description: z.string().optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
@@ -24,7 +29,7 @@ export const createBlockSchema = z.object({
 export type CreateBlockData = z.infer<typeof createBlockSchema>;
 
 export const updateBlockSchema = createBlockSchema.extend({
-  id: z.string().uuid('Invalid block ID'),
+  id: z.string().uuid("Invalid block ID"),
 });
 
 export type UpdateBlockData = z.infer<typeof updateBlockSchema>;

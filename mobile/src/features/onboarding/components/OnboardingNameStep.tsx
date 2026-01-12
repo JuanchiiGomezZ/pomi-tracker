@@ -11,7 +11,7 @@ import { useOnboardingStore } from "../stores/onboarding.store";
 
 export function OnboardingNameStep() {
   const { t } = useTranslation("onboarding");
-  const { firstName, setFirstName, nextStep } = useOnboardingStore();
+  const { firstName, lastName, setFirstName, setLastName, nextStep } = useOnboardingStore();
 
   const {
     control,
@@ -21,11 +21,13 @@ export function OnboardingNameStep() {
     resolver: zodResolver(onboardingNameSchema),
     defaultValues: {
       firstName,
+      lastName,
     },
   });
 
   const onSubmit = (data: OnboardingNameData) => {
     setFirstName(data.firstName);
+    setLastName(data.lastName);
     nextStep();
   };
 
@@ -39,23 +41,43 @@ export function OnboardingNameStep() {
           {t("steps.name.subtitle")}
         </Text>
 
-        <Controller
-          control={control}
-          name="firstName"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              label={t("steps.name.inputLabel")}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.firstName?.message}
-              placeholder={t("steps.name.placeholder")}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit(onSubmit)}
-            />
-          )}
-        />
+        <View style={styles.form}>
+          <Controller
+            control={control}
+            name="firstName"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <TextInput
+                label={t("steps.name.firstNameLabel")}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.firstName?.message}
+                placeholder={t("steps.name.firstNamePlaceholder")}
+                autoFocus
+                returnKeyType="next"
+              />
+            )}
+          />
+
+          <View style={styles.inputSeparator} />
+
+          <Controller
+            control={control}
+            name="lastName"
+            render={({ field: { value, onChange, onBlur } }) => (
+              <TextInput
+                label={t("steps.name.lastNameLabel")}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.lastName?.message}
+                placeholder={t("steps.name.lastNamePlaceholder")}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit(onSubmit)}
+              />
+            )}
+          />
+        </View>
       </View>
 
       <Button onPress={handleSubmit(onSubmit)} variant="primary">
@@ -80,5 +102,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   subtitle: {
     marginBottom: theme.spacing(8),
+  },
+  form: {
+    gap: theme.spacing(4),
+  },
+  inputSeparator: {
+    height: theme.spacing(2),
   },
 }));
