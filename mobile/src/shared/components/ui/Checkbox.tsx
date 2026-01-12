@@ -3,6 +3,7 @@ import { View, Pressable, Animated, StyleSheet } from "react-native";
 import { StyleSheet as UnistylesStyleSheet } from "react-native-unistyles";
 import { Text } from "./Text";
 import type { ViewStyle } from "react-native";
+import { useTheme } from "@/shared/hooks";
 
 interface CheckboxProps {
   value: boolean;
@@ -22,17 +23,17 @@ export function Checkbox({
   style,
 }: CheckboxProps) {
   const [scale] = useState(() => new Animated.Value(1));
-
+  const { theme } = useTheme();
   const getSizeConfig = () => {
     switch (size) {
       case "sm":
-        return { boxSize: 20, iconSize: 12, fontSize: "xs" };
+        return { boxSize: 20, iconSize: 12, fontSize: theme.fontSize.xs };
       case "md":
-        return { boxSize: 24, iconSize: 14, fontSize: "sm" };
+        return { boxSize: 24, iconSize: 14, fontSize: theme.fontSize.sm };
       case "lg":
-        return { boxSize: 28, iconSize: 16, fontSize: "base" };
+        return { boxSize: 28, iconSize: 16, fontSize: theme.fontSize.base };
       default:
-        return { boxSize: 24, iconSize: 14, fontSize: "sm" };
+        return { boxSize: 24, iconSize: 14, fontSize: theme.fontSize.sm };
     }
   };
 
@@ -63,8 +64,8 @@ export function Checkbox({
   const borderColor = value
     ? "transparent"
     : disabled
-    ? theme.colors.grayscale[300]
-    : theme.colors.grayscale[300];
+      ? theme.colors.grayscale[300]
+      : theme.colors.grayscale[300];
 
   const backgroundColor = value ? theme.colors.accent : "transparent";
 
@@ -127,10 +128,8 @@ export function Checkbox({
           style={[
             styles.label,
             {
-              fontSize: theme.fontSize[fontSize],
-              color: disabled
-                ? theme.colors.text.tertiary
-                : theme.colors.text.primary,
+              fontSize: fontSize,
+              color: disabled ? theme.colors.text.tertiary : theme.colors.text.primary,
               marginLeft: 8,
             },
           ]}

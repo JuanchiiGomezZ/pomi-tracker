@@ -2,32 +2,27 @@ import { StyleSheet } from "react-native-unistyles";
 import { Pressable, Text, ActivityIndicator } from "react-native";
 import type { ViewStyle } from "react-native";
 
-type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "outline"
-  | "destructive";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "destructive";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
-  title: string;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  children: string;
 }
 
 export function Button({
-  title,
   onPress,
   variant = "primary",
   size = "md",
   loading = false,
   disabled = false,
   style,
+  children,
 }: ButtonProps) {
   const getIndicatorColor = () => {
     if (variant === "ghost" || variant === "outline") return "#007AFF";
@@ -46,19 +41,13 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={children}
     >
       {loading ? (
         <ActivityIndicator size="small" color={getIndicatorColor()} />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            styles[`text_${variant}`],
-            styles[`text_${size}`],
-          ]}
-        >
-          {title}
+        <Text style={[styles.text, styles[`text_${variant}`], styles[`text_${size}`]]}>
+          {children}
         </Text>
       )}
     </Pressable>
@@ -72,12 +61,13 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: "center",
     gap: theme.spacing(2),
     borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing(4),
   },
   button_primary: {
     backgroundColor: theme.colors.primary,
   },
   button_secondary: {
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.accent,
   },
   button_ghost: {
     backgroundColor: "transparent",

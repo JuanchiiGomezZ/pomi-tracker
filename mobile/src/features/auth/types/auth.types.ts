@@ -1,5 +1,7 @@
 export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
 
+export type OnboardingStatus = 'NAME' | 'BLOCKS' | 'COMPLETE';
+
 export interface User {
   id: string;
   email: string;
@@ -9,6 +11,7 @@ export interface User {
   isActive: boolean;
   emailVerified: boolean;
   organizationId: string | null;
+  onboardingStatus: OnboardingStatus;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-import { View, Pressable, Animated, StyleSheet } from "react-native";
-import { StyleSheet as UnistylesStyleSheet } from "react-native-unistyles";
+import { useRef, useEffect, useCallback } from "react";
+import { Pressable, Animated } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
 import type { ViewStyle } from "react-native";
 
 interface SwitchProps {
@@ -11,6 +11,12 @@ interface SwitchProps {
   style?: ViewStyle;
 }
 
+const SIZE_CONFIG = {
+  sm: { trackWidth: 36, trackHeight: 20, thumbSize: 16, thumbMargin: 2 },
+  md: { trackWidth: 51, trackHeight: 28, thumbSize: 24, thumbMargin: 2 },
+  lg: { trackWidth: 67, trackHeight: 36, thumbSize: 32, thumbMargin: 2 },
+} as const;
+
 export function Switch({
   value,
   onValueChange,
@@ -18,58 +24,28 @@ export function Switch({
   size = "md",
   style,
 }: SwitchProps) {
-  const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
+  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
-  const animateTo = useCallback(
-    (toValue: number) => {
-      Animated.spring(animatedValue, {
-        toValue,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 25,
-      }).start();
-    },
-    [animatedValue]
-  );
+  // Sync animation with external value changes
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: value ? 1 : 0,
+      useNativeDriver: false,
+      tension: 200,
+      friction: 25,
+    }).start();
+  }, [value, animatedValue]);
 
   const handlePress = useCallback(() => {
     if (disabled) return;
-    const newValue = !value;
-    onValueChange(newValue);
-    animateTo(newValue ? 1 : 0);
-  }, [value, disabled, onValueChange, animateTo]);
+    onValueChange(!value);
+  }, [value, disabled, onValueChange]);
 
-  const getSizeConfig = () => {
-    switch (size) {
-      case "sm":
-        return { trackWidth: 36, trackHeight: 20, thumbSize: 16, thumbMargin: 2 };
-      case "md":
-        return { trackWidth: 51, trackHeight: 28, thumbSize: 24, thumbMargin: 2 };
-      case "lg":
-        return { trackWidth: 67, trackHeight: 36, thumbSize: 32, thumbMargin: 2 };
-      default:
-        return { trackWidth: 51, trackHeight: 28, thumbSize: 24, thumbMargin: 2 };
-    }
-  };
-
-  const { trackWidth, trackHeight, thumbSize, thumbMargin } = getSizeConfig();
+  const { trackWidth, trackHeight, thumbSize, thumbMargin } = SIZE_CONFIG[size];
 
   const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
     outputRange: [thumbMargin, trackWidth - thumbSize - thumbMargin],
-  });
-
-  const trackColor = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [
-      theme.colors.grayscale[300], // grayscale[300] for off state
-      theme.colors.accent, // accent color for on state
-    ],
-  });
-
-  const thumbColor = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["#FFFFFF", "#FFFFFF"],
   });
 
   return (
@@ -87,11 +63,13 @@ export function Switch({
           {
             width: trackWidth,
             height: trackHeight,
-            backgroundColor: disabled
-              ? theme.colors.grayscale[200]
-              : trackColor,
             borderRadius: trackHeight / 2,
+            backgroundColor: animatedValue.interpolate({
+              inputRange: [0, 1],
+              outputRange: [styles.track.offColor, styles.track.onColor],
+            }),
           },
+          disabled && styles.trackDisabled,
         ]}
       >
         <Animated.View
@@ -101,11 +79,9 @@ export function Switch({
               width: thumbSize,
               height: thumbSize,
               borderRadius: thumbSize / 2,
-              backgroundColor: disabled
-                ? theme.colors.grayscale[400]
-                : thumbColor,
               transform: [{ translateX }],
             },
+            disabled && styles.thumbDisabled,
           ]}
         />
       </Animated.View>
@@ -113,20 +89,28 @@ export function Switch({
   );
 }
 
-const styles = UnistylesStyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme) => ({
   container: {
     justifyContent: "center",
     alignItems: "center",
   },
   track: {
     justifyContent: "center",
-    alignItems: "center",
+    offColor: theme.colors.grayscale[300],
+    onColor: theme.colors.accent,
+  },
+  trackDisabled: {
+    backgroundColor: theme.colors.grayscale[200],
   },
   thumb: {
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
+  },
+  thumbDisabled: {
+    backgroundColor: theme.colors.grayscale[400],
   },
 }));

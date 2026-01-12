@@ -1,48 +1,111 @@
-import { z } from 'zod';
-import { createZodDto } from 'nestjs-zod';
+import {
+  IsEmail,
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
+  IsUUID,
+  MinLength,
+  MaxLength,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { Role } from '@prisma/client';
 
-export const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(72),
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  role: z.nativeEnum(Role).optional(),
-  organizationId: z.string().uuid().optional(),
-});
+export class CreateUserDto {
+  @IsEmail()
+  email: string;
 
-export class CreateUserDto extends createZodDto(createUserSchema) {}
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  password: string;
 
-export const updateUserSchema = z.object({
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  role: z.nativeEnum(Role).optional(),
-  isActive: z.boolean().optional(),
-});
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
 
-export class UpdateUserDto extends createZodDto(updateUserSchema) {}
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
 
-// Profile update (user updates their own profile)
-export const updateProfileSchema = z.object({
-  firstName: z.string().min(1).max(100).optional(),
-  lastName: z.string().min(1).max(100).optional(),
-  avatarUrl: z.string().url().optional().nullable(),
-});
+  @IsEnum(Role)
+  @IsOptional()
+  role?: Role;
 
-export class UpdateProfileDto extends createZodDto(updateProfileSchema) {}
+  @IsUUID()
+  @IsOptional()
+  organizationId?: string;
+}
 
-// User settings (app-specific settings)
-export const updateSettingsSchema = z.object({
-  timezone: z.string().min(1).max(50).optional(),
-  dayCutoffHour: z.number().int().min(0).max(23).optional(),
-  dayCloseReminderHour: z.number().int().min(0).max(23).optional(),
-});
+export class UpdateUserDto {
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
 
-export class UpdateSettingsDto extends createZodDto(updateSettingsSchema) {}
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
 
-// FCM token for push notifications
-export const registerFcmTokenSchema = z.object({
-  fcmToken: z.string().min(1),
-});
+  @IsEnum(Role)
+  @IsOptional()
+  role?: Role;
 
-export class RegisterFcmTokenDto extends createZodDto(registerFcmTokenSchema) {}
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+}
+
+export class UpdateProfileDto {
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsEmail()
+  avatarUrl?: string | null;
+}
+
+export class UpdateSettingsDto {
+  @IsString()
+  @IsOptional()
+  @MinLength(1)
+  @MaxLength(50)
+  timezone?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Max(23)
+  dayCutoffHour?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Max(23)
+  dayCloseReminderHour?: number;
+}
+
+export class RegisterFcmTokenDto {
+  @IsString()
+  @MinLength(1)
+  fcmToken: string;
+}

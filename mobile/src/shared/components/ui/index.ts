@@ -19,6 +19,8 @@ export { SearchableSelect } from "./SearchableSelect";
 export { Switch } from "./Switch";
 export { Checkbox } from "./Checkbox";
 export { SegmentedControl } from "./SegmentedControl";
+export { ProgressBar } from "./ProgressBar";
+export { IconButton } from "./IconButton";
 export type { ListProps } from "./List";
 export type { EmptyStateProps } from "./EmptyState";
 export type { ErrorStateProps } from "./ErrorState";

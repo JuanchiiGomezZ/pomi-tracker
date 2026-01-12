@@ -4,7 +4,7 @@ import { ScreenWrapper } from "@/shared/components/ui";
 import { useAuthSession } from "@/features/auth/hooks/useAuthSession";
 
 export default function Index() {
-  const { isReady, isAuthenticated } = useAuthSession();
+  const { isReady, isAuthenticated, user } = useAuthSession();
   const rootNavigationState = useRootNavigationState();
   const [isLayoutReady, setIsLayoutReady] = useState(false);
 
@@ -26,15 +26,25 @@ export default function Index() {
     if (!isLayoutReady || !isReady) return;
 
     const timer = setTimeout(() => {
-      if (isAuthenticated) {
-        router.replace("/(tool)/home");
+      if (isAuthenticated && user) {
+        // Redirect based on onboarding status from backend
+        switch (user.onboardingStatus) {
+          case 'NAME':
+          case 'BLOCKS':
+            router.replace("/(onboarding)");
+            break;
+          case 'COMPLETE':
+          default:
+            router.replace("/(tool)/home");
+            break;
+        }
       } else {
         router.replace("/(auth)/login");
       }
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [isLayoutReady, isReady, isAuthenticated]);
+  }, [isLayoutReady, isReady, isAuthenticated, user]);
 
   return <ScreenWrapper loading centered />;
 }

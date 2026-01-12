@@ -6,9 +6,11 @@ import { mmkvLanguageDetector } from "./storage";
 import commonEN from "@shared/locales/en/common.json";
 import authEN from "@shared/locales/en/auth.json";
 import toastEN from "@shared/locales/en/toast.json";
+import onboardingEN from "@shared/locales/en/onboarding.json";
 import commonES from "@shared/locales/es/common.json";
 import authES from "@shared/locales/es/auth.json";
 import toastES from "@shared/locales/es/toast.json";
+import onboardingES from "@shared/locales/es/onboarding.json";
 
 /**
  * Recursos de traducción organizados por idioma y namespace
@@ -18,11 +20,13 @@ const resources = {
     common: commonEN,
     auth: authEN,
     toast: toastEN,
+    onboarding: onboardingEN,
   },
   es: {
     common: commonES,
     auth: authES,
     toast: toastES,
+    onboarding: onboardingES,
   },
 } as const;
 
@@ -36,7 +40,7 @@ i18n
     resources,
     fallbackLng: "es",
     defaultNS: "common",
-    ns: ["common", "auth", "dashboard", "settings", "toast"],
+    ns: ["common", "auth", "dashboard", "settings", "toast", "onboarding"],
 
     interpolation: {
       escapeValue: false, // React ya escapa por defecto

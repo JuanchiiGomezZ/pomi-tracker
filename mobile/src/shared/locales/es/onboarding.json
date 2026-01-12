@@ -1,0 +1,41 @@
+{
+  "title": "Bienvenido a Pomi",
+  "subtitle": "Configuremos tu rutina diaria",
+  "continue": "Continuar",
+  "back": "Atrás",
+  "skip": "Omitir",
+  "steps": {
+    "name": {
+      "title": "¿Cuál es tu nombre?",
+      "subtitle": "Lo usaremos para personalizar tu experiencia",
+      "inputLabel": "Tu nombre",
+      "placeholder": "Ingresa tu nombre"
+    },
+    "blocks": {
+      "title": "Crea tus bloques",
+      "subtitle": "Organiza tu día en bloques de tiempo enfocados",
+      "inputLabel": "Nombre del bloque",
+      "activeDays": "Días activos",
+      "minimumHint": "Necesitas al menos 1 bloque para continuar",
+      "addBlock": "Agregar otro bloque",
+      "newBlock": "Nuevo bloque"
+    },
+    "loops": {
+      "title": "Construye mejores hábitos",
+      "subtitle": "Selecciona los hábitos que quieres rastrear",
+      "suggested": "Sugeridos para ti",
+      "continueWithLoops": "Continuar con {{count}} bucles",
+      "skip": "Omitir por ahora"
+    },
+    "reminders": {
+      "title": "Configura tus recordatorios",
+      "subtitle": "Te ayudaremos a mantenerte en camino",
+      "dayCloseTitle": "Resumen del día",
+      "dayCloseDescription": "Recibe un resumen de tus bucles completados",
+      "closeTime": "Hora del resumen",
+      "blockRemindersTitle": "Recordatorios de bloques",
+      "blockRemindersDescription": "Recibe notificaciones cuando empiecen tus bloques",
+      "complete": "Comenzar tu viaje"
+    }
+  }
+}

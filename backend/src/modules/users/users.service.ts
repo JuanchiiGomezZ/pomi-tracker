@@ -146,19 +146,11 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        timezone: true,
-        dayCutoffHour: true,
-        dayCloseReminderHour: true,
-        currentStreak: true,
-        bestStreak: true,
-        lastActiveDate: true,
-        createdAt: true,
+      include: {
+        blocks: {
+          where: { deletedAt: null },
+          select: { id: true },
+        },
       },
     });
 
@@ -166,7 +158,47 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Calculate onboarding status based on user data
+    const onboardingStatus = this.calculateOnboardingStatus(user);
+
+    // Update if status changed
+    if (onboardingStatus !== user.onboardingStatus) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { onboardingStatus },
+      });
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatarUrl: user.avatarUrl,
+      timezone: user.timezone,
+      dayCutoffHour: user.dayCutoffHour,
+      dayCloseReminderHour: user.dayCloseReminderHour,
+      currentStreak: user.currentStreak,
+      bestStreak: user.bestStreak,
+      lastActiveDate: user.lastActiveDate,
+      onboardingStatus,
+      createdAt: user.createdAt,
+    };
+  }
+
+  private calculateOnboardingStatus(user: {
+    firstName: string | null;
+    blocks: { id: string }[];
+  }): 'NAME' | 'BLOCKS' | 'COMPLETE' {
+    if (!user.firstName || user.firstName.trim() === '') {
+      return 'NAME';
+    }
+
+    if (user.blocks.length === 0) {
+      return 'BLOCKS';
+    }
+
+    return 'COMPLETE';
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

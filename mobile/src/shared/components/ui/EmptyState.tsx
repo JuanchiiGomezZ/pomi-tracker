@@ -7,13 +7,7 @@ import { Text } from "./Text";
 import { Button } from "./Button";
 import { Icon, type IconName, type IconColor } from "./Icon";
 
-type EmptyStateVariant =
-  | "primary"
-  | "text"
-  | "success"
-  | "warning"
-  | "error"
-  | "info";
+type EmptyStateVariant = "primary" | "text" | "success" | "warning" | "error" | "info";
 type EmptyStateSize = "sm" | "md" | "lg";
 
 interface EmptyStateProps extends ViewProps {
@@ -72,14 +66,7 @@ export function EmptyState({
   const iconSize = sizeIconSizes[size];
 
   return (
-    <View
-      style={[
-        styles.container,
-        fullHeight && styles.containerFullHeight,
-        style,
-      ]}
-      {...props}
-    >
+    <View style={[styles.container, fullHeight && styles.containerFullHeight, style]} {...props}>
       <Icon name={iconName} size={iconSize} color={iconColor} withBackground />
 
       <View style={styles.textContainer}>
@@ -96,14 +83,14 @@ export function EmptyState({
       {(actionLabel || secondaryActionLabel) && (
         <View style={styles.buttonContainer}>
           {actionLabel && onAction && (
-            <Button variant="primary" title={actionLabel} onPress={onAction} />
+            <Button variant="primary" onPress={onAction}>
+              {actionLabel}
+            </Button>
           )}
           {secondaryActionLabel && onSecondaryAction && (
-            <Button
-              variant="outline"
-              title={secondaryActionLabel}
-              onPress={onSecondaryAction}
-            />
+            <Button variant="outline" onPress={onSecondaryAction}>
+              {secondaryActionLabel}
+            </Button>
           )}
         </View>
       )}
@@ -128,7 +115,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: `${theme.colors.primary}15`,
   },
   iconFilter: {
-    backgroundColor: `${theme.colors.secondary}15`,
+    backgroundColor: `${theme.colors.text}15`,
   },
   iconError: {
     backgroundColor: `${theme.colors.error}15`,

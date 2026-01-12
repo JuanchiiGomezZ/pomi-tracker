@@ -1,8 +1,6 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useAuth as useClerkAuth } from "@clerk/clerk-expo";
-import * as SecureStore from "expo-secure-store";
-import { STORAGE_KEYS } from "@/constants";
-import { authApi } from "../services/auth.service";
+import { authenticatedApiCall } from "@/shared/lib/api";
 import { useAuthStore, selectIsAuthenticated } from "../stores/auth.store";
 import type { User } from "../types/auth.types";
 
@@ -14,22 +12,20 @@ export interface AuthSession {
 
   // Loading states
   isClerkLoaded: boolean;
-  isBackendSyncing: boolean;
 
   // Actions
-  syncWithBackend: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
+// Flag to prevent concurrent requests - persists across component re-renders
+let isLoadingUserData = false;
+let hasLoadedUserData = false;
+
 /**
- * Unified auth hook that combines Clerk and backend authentication.
- * A user is only considered "authenticated" when:
- * 1. Clerk session is active AND
- * 2. User is synced with our backend (has user data in authStore)
+ * Simplified auth hook that uses Clerk as the single source of truth.
+ * User data is loaded once from /users/me after Clerk login.
  */
 export function useAuthSession(): AuthSession {
-  const syncingRef = useRef(false);
-
   // Clerk state
   const {
     isLoaded: isClerkLoaded,
@@ -44,93 +40,78 @@ export function useAuthSession(): AuthSession {
   const isStoreLoading = useAuthStore((state) => state.isLoading);
   const login = useAuthStore((state) => state.login);
   const storeLogout = useAuthStore((state) => state.logout);
-  const setLoading = useAuthStore((state) => state.setLoading);
-
-  /**
-   * Sync Clerk session with backend
-   * Exchanges Clerk token for internal tokens
-   */
-  const syncWithBackend = useCallback(async () => {
-    if (syncingRef.current) return;
-    syncingRef.current = true;
-
-    try {
-      setLoading(true);
-
-      const clerkToken = await getToken();
-
-      if (!clerkToken) {
-        throw new Error("No Clerk token available");
-      }
-
-      // Exchange Clerk token for backend tokens
-      const response = await authApi.verifyClerkToken(clerkToken);
-
-      // Save to auth store
-      login(response.user, response.accessToken);
-
-      // Save refresh token (if provided)
-      if (response.refreshToken) {
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
-      }
-    } catch (error) {
-      console.error("Backend sync failed:", error);
-      // If sync fails, sign out of Clerk too
-      await signOut();
-      storeLogout();
-    } finally {
-      setLoading(false);
-      syncingRef.current = false;
-    }
-  }, [getToken, login, setLoading, signOut, storeLogout]);
 
   /**
    * Full logout - clears both Clerk and backend session
    */
   const logout = useCallback(async () => {
     try {
-      // Try to logout from backend
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-      if (refreshToken) {
-        try {
-          await authApi.logout(refreshToken);
-        } catch {
-          // Continue even if backend logout fails
-        }
-      }
-
-      // Clear local storage
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-
-      // Clear store
+      // Clear store first
       storeLogout();
 
-      // Sign out of Clerk
+      // Reset loading flags so next login will fetch user data
+      isLoadingUserData = false;
+      hasLoadedUserData = false;
+
+      // Sign out of Clerk (handles token cleanup internally)
       await signOut();
     } catch (error) {
       console.error("Logout error:", error);
       // Force clear everything anyway
       storeLogout();
+      isLoadingUserData = false;
+      hasLoadedUserData = false;
       await signOut();
     }
   }, [signOut, storeLogout]);
 
   /**
-   * Auto-sync when Clerk is signed in but backend is not synced
+   * Auto-load user data when Clerk is signed in
+   * Uses module-level flags to prevent concurrent requests
    */
   useEffect(() => {
-    const shouldSync =
+    // Only load when Clerk is fully ready and user not already loaded
+    if (
       isClerkLoaded &&
       isClerkSignedIn &&
-      !isBackendAuthenticated &&
       !isStoreLoading &&
-      !syncingRef.current;
+      !user
+    ) {
+      // Prevent concurrent requests
+      if (isLoadingUserData) {
+        console.log("[useAuthSession] Already loading user data, skipping...");
+        return;
+      }
 
-    if (shouldSync) {
-      syncWithBackend();
+      // Prevent re-loading if already succeeded
+      if (hasLoadedUserData) {
+        console.log("[useAuthSession] User already loaded previously, skipping...");
+        return;
+      }
+
+      const loadUser = async () => {
+        isLoadingUserData = true;
+        try {
+          console.log("[useAuthSession] Loading user data...");
+          const userData = await authenticatedApiCall<User>("get", "/users/me", getToken);
+          login(userData);
+          hasLoadedUserData = true;
+          console.log("[useAuthSession] User data loaded successfully");
+        } catch (error) {
+          console.error("[useAuthSession] Failed to load user data:", error);
+          isLoadingUserData = false; // Reset on error so we can retry
+        }
+      };
+
+      loadUser();
     }
-  }, [isClerkLoaded, isClerkSignedIn, isBackendAuthenticated, isStoreLoading, syncWithBackend]);
+
+    // Reset flags when user signs out
+    if (!isClerkSignedIn) {
+      isLoadingUserData = false;
+      hasLoadedUserData = false;
+    }
+  }, [isClerkLoaded, isClerkSignedIn, isStoreLoading, user, getToken, login]);
 
   /**
    * If Clerk is signed out, clear backend state too
@@ -144,15 +125,12 @@ export function useAuthSession(): AuthSession {
   // Compute unified state
   const isReady = isClerkLoaded && !isStoreLoading;
   const isAuthenticated = isClerkSignedIn === true && isBackendAuthenticated;
-  const isBackendSyncing = isStoreLoading;
 
   return {
     isReady,
     isAuthenticated,
     user,
     isClerkLoaded,
-    isBackendSyncing,
-    syncWithBackend,
     logout,
   };
 }

@@ -6,7 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import { UnistylesRuntime } from "react-native-unistyles";
 import { preferences } from "@/shared/utils";
 import { clerkConfig } from "@/shared/config/clerk";
-import { router } from "expo-router";
+import { setClerkTokenGetter } from "@/shared/lib/api";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,12 +58,28 @@ function ThemeInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// API Token Initializer - Configura el token getter para API calls
+function ApiTokenInitializer({ children }: { children: React.ReactNode }) {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    // Inicializar el token getter globalmente para todas las llamadas API
+    if (getToken) {
+      setClerkTokenGetter(getToken);
+    }
+  }, [getToken]);
+
+  return <>{children}</>;
+}
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={clerkConfig.publishableKey}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeInitializer>{children}</ThemeInitializer>
-      </QueryClientProvider>
+      <ApiTokenInitializer>
+        <QueryClientProvider client={queryClient}>
+          <ThemeInitializer>{children}</ThemeInitializer>
+        </QueryClientProvider>
+      </ApiTokenInitializer>
     </ClerkProvider>
   );
 }

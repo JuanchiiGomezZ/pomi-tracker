@@ -92,35 +92,6 @@ const generalStorage = {
   },
 };
 
-// ==================== SECURE STORE OPERATIONS (Sensitive Data) ====================
-
-const secureStorage = {
-  getString: async (key: string): Promise<string | null> => {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch (error) {
-      console.error(`[SecureStore] getString error for key "${key}":`, error);
-      return null;
-    }
-  },
-
-  set: async (key: string, value: string): Promise<void> => {
-    try {
-      await SecureStore.setItemAsync(key, value);
-    } catch (error) {
-      console.error(`[SecureStore] set error for key "${key}":`, error);
-    }
-  },
-
-  remove: async (key: string): Promise<void> => {
-    try {
-      await SecureStore.deleteItemAsync(key);
-    } catch (error) {
-      console.error(`[SecureStore] remove error for key "${key}":`, error);
-    }
-  },
-};
-
 // ==================== GENERAL STORAGE (MMKV) ====================
 
 export const storage = {
@@ -162,58 +133,6 @@ export const storage = {
   },
 };
 
-// ==================== SECURE STORAGE (Tokens) ====================
-
-export const secureStorageApi = {
-  // Access Token
-  getAccessToken: async (): Promise<string | null> => {
-    return secureStorage.getString(STORAGE_KEYS.ACCESS_TOKEN);
-  },
-
-  setAccessToken: async (token: string): Promise<void> => {
-    await secureStorage.set(STORAGE_KEYS.ACCESS_TOKEN, token);
-  },
-
-  removeAccessToken: async (): Promise<void> => {
-    await secureStorage.remove(STORAGE_KEYS.ACCESS_TOKEN);
-  },
-
-  // Refresh Token
-  getRefreshToken: async (): Promise<string | null> => {
-    return secureStorage.getString(STORAGE_KEYS.REFRESH_TOKEN);
-  },
-
-  setRefreshToken: async (token: string): Promise<void> => {
-    await secureStorage.set(STORAGE_KEYS.REFRESH_TOKEN, token);
-  },
-
-  removeRefreshToken: async (): Promise<void> => {
-    await secureStorage.remove(STORAGE_KEYS.REFRESH_TOKEN);
-  },
-
-  // User data (encrypted)
-  getUser: async (): Promise<string | null> => {
-    return secureStorage.getString(STORAGE_KEYS.USER);
-  },
-
-  setUser: async (userData: string): Promise<void> => {
-    await secureStorage.set(STORAGE_KEYS.USER, userData);
-  },
-
-  removeUser: async (): Promise<void> => {
-    await secureStorage.remove(STORAGE_KEYS.USER);
-  },
-
-  // Clear all auth data
-  clearAuthData: async (): Promise<void> => {
-    await Promise.all([
-      secureStorage.remove(STORAGE_KEYS.ACCESS_TOKEN),
-      secureStorage.remove(STORAGE_KEYS.REFRESH_TOKEN),
-      secureStorage.remove(STORAGE_KEYS.USER),
-    ]);
-  },
-};
-
 // ==================== APP PREFERENCES (MMKV) ====================
 
 export const preferences = {
@@ -233,9 +152,7 @@ export const preferences = {
 
   // Onboarding
   hasSeenOnboarding: (): boolean => {
-    return (
-      generalStorage.getBoolean(STORAGE_KEYS.ONBOARDING_COMPLETED) ?? false
-    );
+    return generalStorage.getBoolean(STORAGE_KEYS.ONBOARDING_COMPLETED) ?? false;
   },
 
   setOnboardingCompleted: (completed: boolean): void => {

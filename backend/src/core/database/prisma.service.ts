@@ -42,7 +42,6 @@ export class PrismaService
     }
 
     // Delete in correct order to respect foreign key constraints
-    await this.refreshToken.deleteMany();
     await this.user.deleteMany();
     await this.organization.deleteMany();
   }

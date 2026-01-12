@@ -650,8 +650,6 @@ export default function ToolLayout() {
 }
 ```
 
-**IMPORTANT:** Auth check goes in the _layout, NOT in a ProtectedRoute component. This is the established pattern.
-
 **Dynamic Routes:**
 ```typescript
 // app/(tool)/products/[id]/index.tsx
@@ -709,12 +707,13 @@ export function LoginForm() {
 
 **Creating New Base Components:**
 
-When a base component doesn't exist, create it in `shared/components/ui/`:
+When a base component doesn't exist, create it in `shared/components/ui/` using `StyleSheet.create` with the Unistyles theme and using the shared `Text` component:
 
 ```typescript
 // shared/components/ui/custom-component.tsx
-import { View, Text, StyleSheet } from 'react-native';
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet } from "react-native-unistyles";
+import { Pressable } from "react-native";
+import { Text } from "./text";
 
 interface CustomComponentProps {
   title: string;
@@ -722,14 +721,31 @@ interface CustomComponentProps {
 }
 
 export function CustomComponent({ title, onPress }: CustomComponentProps) {
-  const { styles } = useStyles();
   return (
-    <View style={styles.container}>
-      <Text>{title}</Text>
-    </View>
+    <Pressable style={styles.container} onPress={onPress}>
+      <Text variant="body" color="primary">
+        {title}
+      </Text>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create((theme) => ({
+  container: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing(4),
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+  },
+}));
 ```
+
+**Key patterns:**
+- Use `StyleSheet.create((theme) => ({...}))` - NOT `useStyles()` hook
+- Use the shared `Text` component with `variant` and `color` props
+- Access theme values via `theme.colors`, `theme.spacing`, `theme.radius`
+- Components are exported as named functions
+- Styles are defined at the bottom of the file (not inline)
 
 ### Unistyles Theme System
 
@@ -761,18 +777,27 @@ StyleSheet.configure({
 **Using Styles:**
 
 ```typescript
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet } from "react-native-unistyles";
+import { View } from "react-native";
+import { Text } from "./text";
 
 export function MyComponent() {
-  const { styles, theme } = useStyles();
   return (
     <View style={styles.container}>
-      <Text style={{ color: theme.colors.text }}>
+      <Text variant="body" color="primary">
         Hello
       </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create((theme) => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing(4),
+  },
+}));
 ```
 
 **NVER use StyleSheet from react-native directly.** Always use Unistyles with the theme.
@@ -1311,7 +1336,7 @@ import { router } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 
 // Styles
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet } from "react-native-unistyles";
 
 // i18n
 import { useTranslation } from 'react-i18next';

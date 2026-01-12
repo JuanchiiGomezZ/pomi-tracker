@@ -110,9 +110,7 @@ export function ConfirmationSheet({
       <View style={[styles.container, style]}>
         {/* Header with Icon */}
         <View style={styles.header}>
-          <View
-            style={[styles.iconContainer, { backgroundColor: config.bgColor }]}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: config.bgColor }]}>
             <Icon name={displayIcon} size="xl" color={config.iconColor} />
           </View>
           <Text variant="h3" style={styles.title}>
@@ -131,31 +129,25 @@ export function ConfirmationSheet({
             customButtons.map((button, index) => (
               <Button
                 key={index}
-                title={button.label}
                 onPress={button.onPress}
                 variant={button.variant}
                 loading={button.loading}
                 disabled={button.disabled}
                 style={styles.button}
-              />
+              >
+                {button.label}
+              </Button>
             ))
           ) : (
             <>
-              <Button
-                title={confirmText}
-                variant={variantButtonMap[variant]}
-                onPress={handleConfirm}
-                loading={loading}
-                style={styles.button}
-              />
+              <Button variant={variantButtonMap[variant]} onPress={handleConfirm} loading={loading}>
+                {confirmText}
+              </Button>
 
               {showCancel && (
-                <Button
-                  title={cancelText}
-                  variant="outline"
-                  onPress={onClose}
-                  style={styles.button}
-                />
+                <Button variant="outline" onPress={onClose} style={styles.button}>
+                  {cancelText}
+                </Button>
               )}
             </>
           )}
