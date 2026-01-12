@@ -58,6 +58,148 @@ Simplify to use **only Clerk tokens** throughout the entire flow. Eliminate inte
 
 ---
 
+## Onboarding Status Management
+
+### Overview
+
+Onboarding status is now managed **server-side** to prevent client-side logic errors and provide a single source of truth. The backend determines what onboarding steps are missing based on user data.
+
+### OnboardingStatus Enum
+
+**Location:** `backend/prisma/schema.prisma`
+
+```prisma
+enum OnboardingStatus {
+  NAME      // Missing firstName
+  BLOCKS    // No blocks created yet (minimum 1 required)
+  COMPLETE  // All required steps done
+}
+```
+
+**Note:** Loops and Reminders are optional with defaults, so they're not blocking states.
+
+### User Model Update
+
+```prisma
+model User {
+  // ... existing fields
+
+  onboardingStatus OnboardingStatus @default(NAME) @map("onboarding_status")
+}
+```
+
+### Logic Flow
+
+**On user auto-create (in ClerkAuthGuard):**
+```typescript
+user = await this.prisma.user.create({
+  data: {
+    // ... other fields
+    onboardingStatus: 'NAME', // Always starts here
+  },
+});
+```
+
+**When `/users/me` is called:**
+```typescript
+async getMe(userId: string) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    include: { blocks: true }, // Need to check blocks
+  });
+
+  // Determine current onboarding status
+  let status: OnboardingStatus = 'COMPLETE';
+
+  if (!user.firstName || user.firstName.trim() === '') {
+    status = 'NAME';
+  } else if (user.blocks.length === 0) {
+    status = 'BLOCKS';
+  }
+
+  // Update if changed
+  if (status !== user.onboardingStatus) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { onboardingStatus: status },
+    });
+  }
+
+  return {
+    ...user,
+    onboardingStatus: status,
+  };
+}
+```
+
+**When onboarding endpoint is called:**
+```typescript
+@Post('onboarding/complete')
+async completeOnboarding(@CurrentUser() user, @Body() dto: CompleteOnboardingDto) {
+  // 1. Update user firstName
+  await this.prisma.user.update({
+    where: { id: user.id },
+    data: {
+      firstName: dto.firstName,
+      // ... other settings
+    },
+  });
+
+  // 2. Create blocks
+  await this.prisma.block.createMany({
+    data: dto.defaultBlocks.map(b => ({
+      ...b,
+      userId: user.id,
+    })),
+  });
+
+  // 3. Update status to COMPLETE
+  await this.prisma.user.update({
+    where: { id: user.id },
+    data: { onboardingStatus: 'COMPLETE' },
+  });
+
+  return { success: true };
+}
+```
+
+### Mobile Integration
+
+**On app start / after login:**
+```typescript
+const { user } = useAuthSession();
+
+useEffect(() => {
+  if (user) {
+    switch (user.onboardingStatus) {
+      case 'NAME':
+      case 'BLOCKS':
+        router.replace('/(onboarding)');
+        break;
+      case 'COMPLETE':
+        router.replace('/(tool)/home');
+        break;
+    }
+  }
+}, [user?.onboardingStatus]);
+```
+
+**In onboarding wizard:**
+```typescript
+// Wizard can start from the appropriate step based on status
+const initialStep = user.onboardingStatus === 'NAME' ? 0 : 1;
+```
+
+### Benefits
+
+- ✅ Single source of truth (backend)
+- ✅ No client-side logic errors
+- ✅ Can resume onboarding from correct step
+- ✅ Scalable (easy to add new states)
+- ✅ Backend validates all requirements
+
+---
+
 ## Backend Design
 
 ### 1. ClerkAuthGuard (Enhanced)
@@ -377,13 +519,19 @@ Flow:
 **Step 1.1: Database Migration**
 ```bash
 cd backend
-npx prisma migrate dev --name remove_refresh_tokens
+npx prisma migrate dev --name auth_simplification_and_onboarding
 ```
 
-**Migration file:**
+**Migration includes:**
 ```prisma
--- Drop refresh_tokens table
+-- 1. Drop refresh_tokens table
 DROP TABLE refresh_tokens;
+
+-- 2. Add onboarding_status enum
+CREATE TYPE "OnboardingStatus" AS ENUM ('NAME', 'BLOCKS', 'COMPLETE');
+
+-- 3. Add onboarding_status column to users
+ALTER TABLE users ADD COLUMN onboarding_status "OnboardingStatus" NOT NULL DEFAULT 'NAME';
 ```
 
 **Step 1.2: Delete Auth Files**
@@ -397,14 +545,21 @@ rm -rf backend/src/modules/auth/strategies/
 **Step 1.3: Update ClerkAuthGuard**
 - Add auto-create user logic
 - Fetch user data from Clerk on first request
-- Create user in DB if not exists
+- Create user in DB with `onboardingStatus: 'NAME'` as default
 
-**Step 1.4: Update auth.module.ts**
+**Step 1.4: Update UsersService (/users/me)**
+- Add logic to calculate onboardingStatus based on data
+- Check if firstName is empty → 'NAME'
+- Check if blocks.length === 0 → 'BLOCKS'
+- Otherwise → 'COMPLETE'
+- Update user record if status changed
+
+**Step 1.5: Update auth.module.ts**
 - Remove JwtModule import
 - Remove AuthService provider
 - Keep only ClerkAuthGuard
 
-**Step 1.5: Verify APP_GUARD**
+**Step 1.6: Verify APP_GUARD**
 - Ensure ClerkAuthGuard is registered globally
 - Keep @Public() decorator working
 
@@ -476,17 +631,39 @@ rm mobile/src/features/auth/services/auth.service.ts
 3. Verify 401 error
 4. Verify automatic logout
 
+**Test 3.6: Onboarding Status - New User**
+1. Sign up new user
+2. Call /users/me
+3. Verify `onboardingStatus: 'NAME'`
+4. Verify redirect to onboarding in mobile
+
+**Test 3.7: Onboarding Status - Complete Flow**
+1. New user with `onboardingStatus: 'NAME'`
+2. Complete onboarding (add firstName + blocks)
+3. Call /users/me
+4. Verify `onboardingStatus: 'COMPLETE'`
+5. Verify redirect to home in mobile
+
+**Test 3.8: Onboarding Status - Partial Data**
+1. Create user with firstName but no blocks
+2. Call /users/me
+3. Verify `onboardingStatus: 'BLOCKS'`
+4. Verify can resume from blocks step
+
 ---
 
 ## Success Criteria
 
 ### Functional Requirements
 - ✅ Users can sign up/login with Clerk (OAuth supported)
-- ✅ First API request auto-creates user in DB
+- ✅ First API request auto-creates user in DB with `onboardingStatus: 'NAME'`
 - ✅ Subsequent requests use existing user
 - ✅ Token expiration handled automatically by Clerk
 - ✅ Logout clears all session data
 - ✅ 401 errors trigger automatic logout
+- ✅ Onboarding status calculated by backend (NAME → BLOCKS → COMPLETE)
+- ✅ Mobile redirects based on onboarding status
+- ✅ Users can resume onboarding from correct step
 
 ### Non-Functional Requirements
 - ✅ Simpler codebase (fewer files, less logic)
@@ -552,7 +729,7 @@ If issues arise during migration:
 
 ## Conclusion
 
-This design simplifies authentication by using Clerk as the single source of truth. It eliminates dual token systems, reduces code complexity, improves security, and follows industry-standard patterns.
+This design simplifies authentication by using Clerk as the single source of truth and moves onboarding logic to the backend. It eliminates dual token systems, reduces code complexity, improves security, and follows industry-standard patterns.
 
 **Key Benefits:**
 - 50% less authentication code
@@ -560,12 +737,16 @@ This design simplifies authentication by using Clerk as the single source of tru
 - Better security
 - Simpler mental model
 - Clerk handles all edge cases
+- Server-side onboarding status (single source of truth)
+- Scalable onboarding flow (easy to add new steps)
 
 **Implementation Effort:**
-- Backend: ~2-3 hours
-- Mobile: ~2-3 hours
-- Testing: ~1 hour
-- **Total: ~6 hours**
+- Backend Auth: ~2-3 hours
+- Backend Onboarding Status: ~1 hour
+- Mobile Auth: ~2-3 hours
+- Mobile Onboarding Integration: ~30 minutes
+- Testing: ~1-2 hours
+- **Total: ~7-8 hours**
 
 ---
 
